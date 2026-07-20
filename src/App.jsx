@@ -6,6 +6,7 @@ import BottomNav from './components/BottomNav';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Stats from './pages/Stats';
+import Calendar from './pages/Calendar';
 import Spaces from './pages/Spaces';
 import SpaceDetail from './pages/SpaceDetail';
 import Goals from './pages/Goals';
@@ -33,6 +34,7 @@ export default function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
               <Route path="/statistici" element={<PrivateRoute><Stats /></PrivateRoute>} />
+              <Route path="/calendar" element={<PrivateRoute><Calendar /></PrivateRoute>} />
               <Route path="/spatii" element={<PrivateRoute><Spaces /></PrivateRoute>} />
               <Route path="/spatii/:spaceId" element={<PrivateRoute><SpaceDetail /></PrivateRoute>} />
               <Route path="/obiective" element={<PrivateRoute><Goals /></PrivateRoute>} />
