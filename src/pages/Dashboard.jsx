@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useData, CATEGORIES, CAT_MAP, curSuffix } from '../context/DataContext';
 import useCountUp from '../hooks/useCountUp';
+import useTransactionFilters from '../hooks/useTransactionFilters';
 import AmountInput, { parseAmountInput } from '../components/AmountInput';
+import FilterPanel from '../components/FilterPanel';
 
 function fmt(n) {
   return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -23,7 +25,7 @@ function previousMonthKey() {
 }
 
 export default function Dashboard() {
-  const { entries, addEntry, deleteEntry } = useData();
+  const { entries, spaces, addEntry, deleteEntry } = useData();
   const [currency, setCurrency] = useState('RON');
   const [type, setType] = useState('income');
   const [category, setCategory] = useState('salariu');
@@ -71,7 +73,9 @@ export default function Dashboard() {
   const topCategoryId = Object.keys(categoryTotals).sort((a, b) => categoryTotals[b] - categoryTotals[a])[0];
   const topCategory = topCategoryId ? CAT_MAP[topCategoryId] : null;
 
-  const sorted = [...curEntries].sort((a, b) => b.createdAt - a.createdAt).slice(0, 30);
+  const { filters, setFilter, reset: resetFilters, filtered, activeCount } = useTransactionFilters(curEntries);
+  const [showFilters, setShowFilters] = useState(false);
+  const sorted = [...filtered].sort((a, b) => b.createdAt - a.createdAt).slice(0, 100);
 
   async function handleAdd(e) {
     e.preventDefault();
@@ -227,13 +231,36 @@ export default function Dashboard() {
         </button>
       </form>
 
-      <div style={{ fontSize: 11, color: 'rgba(244,236,219,0.45)', textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 600, marginBottom: 12 }}>
-        Istoric
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ fontSize: 11, color: 'rgba(244,236,219,0.45)', textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 600 }}>
+          Istoric
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowFilters(!showFilters)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(244,236,219,0.06)',
+            border: '1px solid var(--line)', borderRadius: 20, padding: '6px 12px', cursor: 'pointer',
+            color: 'rgba(244,236,219,0.7)', fontSize: 12.5, fontWeight: 600,
+          }}
+        >
+          🔍 Filtre{activeCount > 0 ? ` (${activeCount})` : ''}
+        </button>
       </div>
+
+      {showFilters && (
+        <FilterPanel
+          filters={filters}
+          setFilter={setFilter}
+          reset={resetFilters}
+          activeCount={activeCount}
+          spaces={spaces}
+        />
+      )}
 
       {sorted.length === 0 && (
         <div style={{ textAlign: 'center', color: 'rgba(244,236,219,0.4)', padding: '36px 0', border: '1px dashed var(--line)', borderRadius: 14 }}>
-          Nicio tranzacție încă
+          {curEntries.length === 0 ? 'Nicio tranzacție încă' : 'Nimic găsit pentru filtrul curent'}
         </div>
       )}
 
