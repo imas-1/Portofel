@@ -14,10 +14,34 @@
   --line: rgba(244, 236, 219, 0.14);
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body, #root { height: 100%; }
-html, body { touch-action: manipulation; overscroll-behavior-y: contain; overflow-x: hidden; }
-canvas { max-width: 100%; }
+* {
+  margin: 0; padding: 0; box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;      /* elimină lupa/meniul de copiere pe iOS */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+input, textarea {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+}
+html, body, #root { height: 100%; width: 100%; max-width: 100%; }
+html, body {
+  touch-action: manipulation;
+  overscroll-behavior-y: contain;
+  overflow-x: hidden;
+  scrollbar-width: none;         /* Firefox: ascunde bara de scroll, scroll-ul rămâne funcțional */
+  -ms-overflow-style: none;      /* IE/old Edge */
+}
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }  /* Chrome/Safari */
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; }
+
+canvas, svg, img { max-width: 100%; }
+#root { overflow-x: hidden; }
 
 body {
   font-family: 'Inter', -apple-system, sans-serif;
@@ -130,7 +154,19 @@ input:focus { outline:none; border-color:var(--brass); box-shadow: 0 0 0 3px rgb
 .bottom-nav a {
   flex: 1; display:flex; flex-direction:column; align-items:center; gap:2px;
   padding: 10px 0 8px; text-decoration:none; color: rgba(244,236,219,0.45);
-  font-size: 11px; font-weight:600;
+  font-size: 9.5px; font-weight:600; white-space: nowrap;
 }
 .bottom-nav a.active { color: var(--brass); }
 .bottom-nav .nav-icon { font-size: 19px; }
+
+.fab-button {
+  position: fixed;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: calc(72px + env(safe-area-inset-bottom) + 14px);
+  width: 58px; height: 58px; border-radius: 50%;
+  background: var(--brass); color: #2a1e08; font-size: 28px; font-weight: 700; border: none;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.4); cursor: pointer; z-index: 60;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .15s ease;
+}
+.fab-button:active { transform: scale(0.92); }
