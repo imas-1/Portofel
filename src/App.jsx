@@ -8,6 +8,8 @@ import Dashboard from './pages/Dashboard';
 import Stats from './pages/Stats';
 import Spaces from './pages/Spaces';
 import SpaceDetail from './pages/SpaceDetail';
+import Goals from './pages/Goals';
+import GoalDetail from './pages/GoalDetail';
 import Settings from './pages/Settings';
 
 function Shell({ children }) {
@@ -33,6 +35,8 @@ export default function App() {
               <Route path="/statistici" element={<PrivateRoute><Stats /></PrivateRoute>} />
               <Route path="/spatii" element={<PrivateRoute><Spaces /></PrivateRoute>} />
               <Route path="/spatii/:spaceId" element={<PrivateRoute><SpaceDetail /></PrivateRoute>} />
+              <Route path="/obiective" element={<PrivateRoute><Goals /></PrivateRoute>} />
+              <Route path="/obiective/:goalId" element={<PrivateRoute><GoalDetail /></PrivateRoute>} />
               <Route path="/setari" element={<PrivateRoute><Settings /></PrivateRoute>} />
             </Routes>
           </Shell>
