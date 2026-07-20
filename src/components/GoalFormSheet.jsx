@@ -1,28 +1,26 @@
 import { useEffect, useState } from 'react';
 import BottomSheet from './BottomSheet';
+import { EMOJI_PRESETS, SPACE_COLORS } from './SpaceFormSheet';
 import AmountInput, { parseAmountInput } from './AmountInput';
 
-export const EMOJI_PRESETS = ['✈️','🚗','🎄','💻','🏠','🎁','💍','📱','🎓','🏖️','⚽','🐶','💰','🎂','🛠️','📚'];
-export const SPACE_COLORS = ['#c99a3e', '#3f8f5f', '#4f7cd6', '#b0503f', '#8b5fbf', '#3ba7a0'];
-
-export default function SpaceFormSheet({ open, onClose, onSave, initial }) {
+export default function GoalFormSheet({ open, onClose, onSave, initial }) {
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState(EMOJI_PRESETS[0]);
-  const [customEmoji, setCustomEmoji] = useState('');
-  const [budget, setBudget] = useState('');
+  const [targetAmount, setTargetAmount] = useState('');
+  const [currency, setCurrency] = useState('RON');
   const [color, setColor] = useState(SPACE_COLORS[0]);
-  const [description, setDescription] = useState('');
+  const [deadline, setDeadline] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setName(initial?.name || '');
-    setEmoji(EMOJI_PRESETS.includes(initial?.emoji) ? initial.emoji : EMOJI_PRESETS[0]);
-    setCustomEmoji(initial?.emoji && !EMOJI_PRESETS.includes(initial.emoji) ? initial.emoji : '');
-    setBudget(initial?.budget ?? '');
+    setEmoji(initial?.emoji || EMOJI_PRESETS[0]);
+    setTargetAmount(initial?.targetAmount ?? '');
+    setCurrency(initial?.currency || 'RON');
     setColor(initial?.color || SPACE_COLORS[0]);
-    setDescription(initial?.description || '');
+    setDeadline(initial?.deadline || '');
     setError('');
   }, [open, initial]);
 
@@ -31,23 +29,17 @@ export default function SpaceFormSheet({ open, onClose, onSave, initial }) {
     setError('');
     const trimmedName = name.trim().slice(0, 40);
     if (!trimmedName) {
-      setError('Dă un nume spațiului.');
+      setError('Dă un nume obiectivului.');
       return;
     }
-    const budgetVal = budget ? parseAmountInput(budget) : null;
-    if (budgetVal !== null && (isNaN(budgetVal) || budgetVal <= 0)) {
-      setError('Bugetul introdus nu este valid.');
+    const target = parseAmountInput(targetAmount);
+    if (!target || target <= 0) {
+      setError('Introdu o sumă țintă validă.');
       return;
     }
     setBusy(true);
     try {
-      await onSave({
-        name: trimmedName,
-        emoji: customEmoji.trim() || emoji,
-        budget: budgetVal,
-        color,
-        description: description.trim().slice(0, 80),
-      });
+      await onSave({ name: trimmedName, emoji, targetAmount: target, currency, color, deadline: deadline || null });
       onClose();
     } catch (err) {
       setError(err.message);
@@ -57,10 +49,10 @@ export default function SpaceFormSheet({ open, onClose, onSave, initial }) {
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={initial ? 'Editează spațiul' : 'Spațiu nou'}>
+    <BottomSheet open={open} onClose={onClose} title={initial ? 'Editează obiectivul' : 'Obiectiv nou'}>
       <form onSubmit={handleSubmit}>
         <label style={labelStyle}>Nume</label>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="ex. Vacanța 2026" maxLength={40} style={inputStyle} />
+        <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="ex. Fond de urgență" maxLength={40} style={inputStyle} />
 
         <label style={labelStyle}>Emoji</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
@@ -68,21 +60,29 @@ export default function SpaceFormSheet({ open, onClose, onSave, initial }) {
             <button
               key={em}
               type="button"
-              onClick={() => { setEmoji(em); setCustomEmoji(''); }}
+              onClick={() => setEmoji(em)}
               style={{
                 width: 42, height: 42, borderRadius: 12, fontSize: 19, cursor: 'pointer',
-                border: `1.5px solid ${emoji === em && !customEmoji ? 'var(--green)' : '#d9cba6'}`,
-                background: emoji === em && !customEmoji ? 'var(--green-soft)' : '#fffdf7',
+                border: `1.5px solid ${emoji === em ? 'var(--green)' : '#d9cba6'}`,
+                background: emoji === em ? 'var(--green-soft)' : '#fffdf7',
               }}
             >
               {em}
             </button>
           ))}
         </div>
-        <input type="text" value={customEmoji} onChange={(e) => setCustomEmoji(e.target.value)} placeholder="sau scrie propriul emoji" maxLength={4} style={inputStyle} />
 
-        <label style={labelStyle}>Buget (opțional)</label>
-        <AmountInput value={budget} onChange={setBudget} placeholder="ex. 2000" style={inputStyle} />
+        <label style={labelStyle}>Sumă țintă</label>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <AmountInput value={targetAmount} onChange={setTargetAmount} placeholder="ex. 5000" style={{ ...inputStyle, flex: 1 }} />
+          <div style={{ display: 'flex', gap: 4, background: '#e8ddc4', borderRadius: 10, padding: 3, height: 46 }}>
+            <button type="button" onClick={() => setCurrency('RON')} style={toggleStyle(currency === 'RON')}>Lei</button>
+            <button type="button" onClick={() => setCurrency('EUR')} style={toggleStyle(currency === 'EUR')}>Euro</button>
+          </div>
+        </div>
+
+        <label style={labelStyle}>Termen (opțional)</label>
+        <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} style={inputStyle} />
 
         <label style={labelStyle}>Culoare</label>
         <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
@@ -100,20 +100,24 @@ export default function SpaceFormSheet({ open, onClose, onSave, initial }) {
           ))}
         </div>
 
-        <label style={labelStyle}>Descriere (opțional)</label>
-        <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="ex. Grecia, iulie" maxLength={80} style={inputStyle} />
-
         {error && <div className="error-msg">{error}</div>}
 
         <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
           <button type="button" onClick={onClose} style={{ ...actionBtnStyle, background: '#e8ddc4', color: 'var(--ink)' }}>Anulează</button>
           <button type="submit" disabled={busy} style={{ ...actionBtnStyle, background: 'var(--green)', color: '#fff' }}>
-            {initial ? 'Salvează modificările' : 'Creează spațiu'}
+            {initial ? 'Salvează' : 'Creează obiectiv'}
           </button>
         </div>
       </form>
     </BottomSheet>
   );
+}
+
+function toggleStyle(active) {
+  return {
+    padding: '0 14px', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 12.5,
+    background: active ? 'var(--brass)' : 'transparent', color: active ? '#2a1e08' : 'var(--ink-soft)',
+  };
 }
 
 const labelStyle = { fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--ink-soft)', marginBottom: 6, display: 'block', fontWeight: 600 };

@@ -4,6 +4,7 @@ const TABS = [
   { to: '/', label: 'Acasă', icon: '💰', end: true },
   { to: '/statistici', label: 'Statistici', icon: '📊' },
   { to: '/spatii', label: 'Spații', icon: '📂' },
+  { to: '/obiective', label: 'Obiective', icon: '🎯' },
   { to: '/setari', label: 'Setări', icon: '⚙️' },
 ];
 

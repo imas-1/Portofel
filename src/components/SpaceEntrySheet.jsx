@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react';
 import BottomSheet from './BottomSheet';
 import { CATEGORIES } from '../context/DataContext';
+import AmountInput, { parseAmountInput } from './AmountInput';
+
+function currentDateStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+function currentTimeStr() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
 
 export default function SpaceEntrySheet({ open, onClose, onSave, initial }) {
   const [type, setType] = useState('expense');
@@ -10,6 +19,7 @@ export default function SpaceEntrySheet({ open, onClose, onSave, initial }) {
   const [amount, setAmount] = useState('');
   const [desc, setDesc] = useState('');
   const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -19,32 +29,38 @@ export default function SpaceEntrySheet({ open, onClose, onSave, initial }) {
     setCategory(initial?.category || 'altele');
     setMethod(initial?.method || 'card');
     setCurrency(initial?.currency || 'RON');
-    setAmount(initial?.amount ?? '');
+    setAmount(initial?.amount != null ? String(initial.amount) : '');
     setDesc(initial?.desc || '');
-    setDate(
-      initial?.createdAt
-        ? new Date(initial.createdAt).toISOString().slice(0, 10)
-        : new Date().toISOString().slice(0, 10)
-    );
+    if (initial?.createdAt) {
+      const d = new Date(initial.createdAt);
+      setDate(d.toISOString().slice(0, 10));
+      setTime(String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'));
+    } else {
+      // implicit: data și ora curentă a dispozitivului — NU 12:00 fix
+      setDate(currentDateStr());
+      setTime(currentTimeStr());
+    }
     setError('');
   }, [open, initial]);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    const val = parseFloat(amount);
+    const val = parseAmountInput(amount);
     if (!val || val <= 0) {
       setError('Introdu o sumă validă.');
       return;
     }
     let createdAt = Date.now();
     if (date) {
-      const chosen = new Date(date + 'T12:00:00');
+      const timePart = time && /^\d{2}:\d{2}$/.test(time) ? time : currentTimeStr();
+      const chosen = new Date(`${date}T${timePart}:00`);
       if (!isNaN(chosen.getTime())) createdAt = chosen.getTime();
     }
     setBusy(true);
     try {
       await onSave({ type, category, method, currency, amount: val, desc: desc.trim(), createdAt });
+      if (document.activeElement) document.activeElement.blur();
       onClose();
     } catch (err) {
       setError(err.message);
@@ -92,11 +108,21 @@ export default function SpaceEntrySheet({ open, onClose, onSave, initial }) {
         </div>
 
         <label style={labelStyle}>Sumă</label>
-        <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Sumă" min="0" step="0.01" style={inputStyle} />
+        <AmountInput value={amount} onChange={setAmount} placeholder="Sumă" style={inputStyle} autoFocus />
+
         <label style={labelStyle}>Descriere</label>
         <input type="text" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Descriere (opțional)" maxLength={80} style={inputStyle} />
-        <label style={labelStyle}>Data</label>
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={inputStyle} />
+
+        <div style={{ display: 'flex', gap: 8, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <label style={labelStyle}>Data</label>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ ...inputStyle, width: '100%', minWidth: 0, maxWidth: '100%' }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <label style={labelStyle}>Ora</label>
+            <input type="time" value={time} onChange={(e) => setTime(e.target.value)} style={{ ...inputStyle, width: '100%', minWidth: 0, maxWidth: '100%' }} />
+          </div>
+        </div>
 
         {error && <div className="error-msg">{error}</div>}
 
