@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useData, CATEGORIES, CAT_MAP, curSuffix } from '../context/DataContext';
 import useCountUp from '../hooks/useCountUp';
+import AmountInput, { parseAmountInput } from '../components/AmountInput';
 
 function fmt(n) {
   return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -75,7 +76,7 @@ export default function Dashboard() {
   async function handleAdd(e) {
     e.preventDefault();
     setError('');
-    const val = parseFloat(amount);
+    const val = parseAmountInput(amount);
     if (!val || val <= 0) {
       setError('Introdu o sumă validă.');
       return;
@@ -85,6 +86,7 @@ export default function Dashboard() {
       await addEntry({ type, amount: val, category, method, currency, desc });
       setAmount('');
       setDesc('');
+      if (document.activeElement) document.activeElement.blur(); // închide tastatura
     } catch (err) {
       setError(err.message);
     } finally {
@@ -217,7 +219,7 @@ export default function Dashboard() {
           <button type="button" onClick={() => setMethod('cash')} style={toggleStyle(method === 'cash', 'var(--brass)', true)}>💵 Cash</button>
         </div>
 
-        <input type="number" placeholder="Sumă" value={amount} onChange={(e) => setAmount(e.target.value)} min="0" step="0.01" />
+        <AmountInput value={amount} onChange={setAmount} placeholder="Sumă" />
         <input type="text" placeholder="Descriere (opțional)" value={desc} onChange={(e) => setDesc(e.target.value)} maxLength={80} />
         {error && <div className="error-msg">{error}</div>}
         <button type="submit" className="btn-primary" disabled={busy}>

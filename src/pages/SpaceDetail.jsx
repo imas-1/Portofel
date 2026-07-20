@@ -203,11 +203,7 @@ export default function SpaceDetail() {
 
       <button
         onClick={() => { setEditingEntry(null); setEntrySheetOpen(true); }}
-        style={{
-          position: 'fixed', bottom: 84, right: 24, width: 58, height: 58, borderRadius: '50%',
-          background: 'var(--brass)', color: '#2a1e08', fontSize: 28, fontWeight: 700, border: 'none',
-          boxShadow: '0 10px 26px rgba(0,0,0,0.4)', cursor: 'pointer', zIndex: 60,
-        }}
+        className="fab-button"
       >
         +
       </button>
