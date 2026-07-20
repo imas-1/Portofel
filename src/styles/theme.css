@@ -152,12 +152,12 @@ input:focus { outline:none; border-color:var(--brass); box-shadow: 0 0 0 3px rgb
   padding-bottom: env(safe-area-inset-bottom);
 }
 .bottom-nav a {
-  flex: 1; display:flex; flex-direction:column; align-items:center; gap:2px;
-  padding: 10px 0 8px; text-decoration:none; color: rgba(244,236,219,0.45);
-  font-size: 9.5px; font-weight:600; white-space: nowrap;
+  flex: 1; display:flex; flex-direction:column; align-items:center; gap:1px;
+  padding: 8px 0 6px; text-decoration:none; color: rgba(244,236,219,0.45);
+  font-size: 8.5px; font-weight:600; white-space: nowrap; min-width: 0;
 }
 .bottom-nav a.active { color: var(--brass); }
-.bottom-nav .nav-icon { font-size: 19px; }
+.bottom-nav .nav-icon { font-size: 17px; }
 
 .fab-button {
   position: fixed;
