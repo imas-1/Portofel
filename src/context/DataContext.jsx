@@ -221,12 +221,50 @@ export function DataProvider({ children }) {
     return remove(ref(db, `users/${user.uid}/goals/${goalId}/contributions/${contribId}`));
   }
 
+  /**
+   * Reimportă un backup — adaugă tranzacții/spații/obiective ca intrări NOI
+   * (id-uri noi generate de Firebase), nu suprascrie nimic din ce există deja.
+   * Astfel restaurarea e sigură chiar dacă mai ai deja date în cont.
+   */
+  async function restoreBackup({ entries: bEntries, spaces: bSpaces, goals: bGoals }) {
+    const spaceIdMap = {};
+
+    for (const sp of bSpaces || []) {
+      const { id: oldId, ...rest } = sp;
+      const newRef = await push(ref(db, `users/${user.uid}/spaces`), rest);
+      if (oldId) spaceIdMap[oldId] = newRef.key;
+    }
+
+    for (const e of bEntries || []) {
+      const { id: oldId, ...rest } = e;
+      if (rest.spaceId && spaceIdMap[rest.spaceId]) rest.spaceId = spaceIdMap[rest.spaceId];
+      else delete rest.spaceId;
+      await push(ref(db, `users/${user.uid}/entries`), rest);
+    }
+
+    for (const g of bGoals || []) {
+      const { id: oldId, contributions, ...rest } = g;
+      const newGoalRef = await push(ref(db, `users/${user.uid}/goals`), rest);
+      for (const c of contributions || []) {
+        const { id: cid, ...cRest } = c;
+        await push(ref(db, `users/${user.uid}/goals/${newGoalRef.key}/contributions`), cRest);
+      }
+    }
+
+    return {
+      entriesCount: (bEntries || []).length,
+      spacesCount: (bSpaces || []).length,
+      goalsCount: (bGoals || []).length,
+    };
+  }
+
   const value = useMemo(
     () => ({
       entries, spaces, goals, loaded,
       addEntry, editEntry, deleteEntry, restoreEntry,
       createSpace, updateSpace, duplicateSpace, deleteSpace,
       createGoal, updateGoal, deleteGoal, addContribution, deleteContribution,
+      restoreBackup,
     }),
     [entries, spaces, goals, loaded]
   );
