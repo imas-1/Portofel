@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData, computeSpaceStats, relativeTime } from '../context/DataContext';
 import SpaceFormSheet from '../components/SpaceFormSheet';
+import { SkeletonCard } from '../components/Skeleton';
 
 function fmt(n) {
   return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -27,7 +28,7 @@ function sortSpaces(list, sortVal, entries) {
 }
 
 export default function Spaces() {
-  const { spaces, entries, createSpace, updateSpace, duplicateSpace, deleteSpace } = useData();
+  const { spaces, entries, loaded, createSpace, updateSpace, duplicateSpace, deleteSpace } = useData();
   const navigate = useNavigate();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingSpace, setEditingSpace] = useState(null);
@@ -92,7 +93,14 @@ export default function Spaces() {
         </select>
       </div>
 
-      {active.map((sp) => (
+      {!loaded && (
+        <>
+          <SkeletonCard />
+          <SkeletonCard />
+        </>
+      )}
+
+      {loaded && active.map((sp) => (
         <SpaceCard
           key={sp.id}
           sp={sp}

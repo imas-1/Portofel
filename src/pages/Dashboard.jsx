@@ -1,9 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useData, CATEGORIES, CAT_MAP, curSuffix } from '../context/DataContext';
+import { useSnackbar } from '../context/SnackbarContext';
 import useCountUp from '../hooks/useCountUp';
 import useTransactionFilters from '../hooks/useTransactionFilters';
+import usePullToRefresh from '../hooks/usePullToRefresh';
+import useHaptic from '../hooks/useHaptic';
 import AmountInput, { parseAmountInput } from '../components/AmountInput';
 import FilterPanel from '../components/FilterPanel';
+import SwipeableRow from '../components/SwipeableRow';
+import SkeletonList from '../components/Skeleton';
 
 function fmt(n) {
   return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -25,7 +30,10 @@ function previousMonthKey() {
 }
 
 export default function Dashboard() {
-  const { entries, spaces, addEntry, deleteEntry } = useData();
+  const { entries, spaces, loaded, addEntry, deleteEntry } = useData();
+  const { showSnackbar } = useSnackbar();
+  const haptic = useHaptic();
+  const { active: ptrActive, refreshing: ptrRefreshing, handlers: ptrHandlers } = usePullToRefresh();
   const [currency, setCurrency] = useState('RON');
   const [type, setType] = useState('income');
   const [category, setCategory] = useState('salariu');
@@ -90,6 +98,7 @@ export default function Dashboard() {
       await addEntry({ type, amount: val, category, method, currency, desc });
       setAmount('');
       setDesc('');
+      haptic(12);
       if (document.activeElement) document.activeElement.blur(); // închide tastatura
     } catch (err) {
       setError(err.message);
@@ -98,13 +107,24 @@ export default function Dashboard() {
     }
   }
 
-  async function handleDelete(id) {
-    if (!confirm('Ștergi această tranzacție?')) return;
-    await deleteEntry(id);
+  async function handleDelete(entry) {
+    haptic(15);
+    await deleteEntry(entry.id);
+    showSnackbar('Tranzacție ștearsă', {
+      actionLabel: 'Anulează',
+      onAction: async () => {
+        const { id, ...rest } = entry;
+        await addEntry(rest);
+        haptic(10);
+      },
+    });
   }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" {...ptrHandlers}>
+      <div className={`ptr-indicator ${ptrActive ? 'active' : ''}`}>
+        {ptrRefreshing ? <span className="spinner" /> : '↓'} {ptrRefreshing ? 'Se actualizează...' : 'Trage pentru actualizare'}
+      </div>
       <div className="brand-row">
         <div>
           <div className="brand">Portofel</div>
@@ -258,38 +278,41 @@ export default function Dashboard() {
         />
       )}
 
-      {sorted.length === 0 && (
+      {!loaded && <SkeletonList rows={5} />}
+
+      {loaded && sorted.length === 0 && (
         <div style={{ textAlign: 'center', color: 'rgba(244,236,219,0.4)', padding: '36px 0', border: '1px dashed var(--line)', borderRadius: 14 }}>
           {curEntries.length === 0 ? 'Nicio tranzacție încă' : 'Nimic găsit pentru filtrul curent'}
         </div>
       )}
 
-      {sorted.map((e, i) => {
+      {loaded && sorted.map((e, i) => {
         const cat = CAT_MAP[e.category] || CAT_MAP.altele;
         const sign = e.type === 'income' ? '+' : '−';
         const dateStr = new Date(e.createdAt).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
         return (
-          <div key={e.id} className="stagger-card" style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            background: '#1c2e26', borderRadius: 14, padding: '13px 14px', marginBottom: 8, border: '1px solid var(--line)',
-            animationDelay: `${Math.min(i, 8) * 0.03}s`,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-              <div style={{ width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 12, background: e.type === 'income' ? 'var(--green-soft)' : 'var(--red-soft)' }}>
-                {cat.icon}
+          <SwipeableRow key={e.id} onDelete={() => handleDelete(e)}>
+            <div className="stagger-card" style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              background: '#1c2e26', padding: '13px 14px', border: '1px solid var(--line)',
+              animationDelay: `${Math.min(i, 8) * 0.03}s`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                <div style={{ width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 12, background: e.type === 'income' ? 'var(--green-soft)' : 'var(--red-soft)' }}>
+                  {cat.icon}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.desc}</div>
+                  <div style={{ fontSize: 11, color: 'rgba(244,236,219,0.4)' }}>{dateStr} · {cat.label}</div>
+                </div>
               </div>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.desc}</div>
-                <div style={{ fontSize: 11, color: 'rgba(244,236,219,0.4)' }}>{dateStr} · {cat.label}</div>
+              <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, gap: 10 }}>
+                <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontWeight: 600, color: e.type === 'income' ? '#6fd196' : '#e08672' }}>
+                  {sign}{fmt(e.amount)} {curSuffix(e.currency || 'RON')}
+                </div>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, gap: 10 }}>
-              <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontWeight: 600, color: e.type === 'income' ? '#6fd196' : '#e08672' }}>
-                {sign}{fmt(e.amount)} {curSuffix(e.currency || 'RON')}
-              </div>
-              <button onClick={() => handleDelete(e.id)} style={{ background: 'none', border: 'none', color: 'rgba(244,236,219,0.35)', fontSize: 17, cursor: 'pointer' }}>✕</button>
-            </div>
-          </div>
+          </SwipeableRow>
         );
       })}
     </div>

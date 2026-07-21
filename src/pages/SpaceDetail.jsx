@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useData, computeSpaceStats, CAT_MAP, curSuffix } from '../context/DataContext';
+import { useSnackbar } from '../context/SnackbarContext';
+import useHaptic from '../hooks/useHaptic';
 import SpaceEntrySheet from '../components/SpaceEntrySheet';
 import SpaceFormSheet from '../components/SpaceFormSheet';
+import SwipeableRow from '../components/SwipeableRow';
 
 function fmt(n) {
   return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -23,6 +26,8 @@ export default function SpaceDetail() {
   const { spaceId } = useParams();
   const navigate = useNavigate();
   const { spaces, entries, addEntry, editEntry, deleteEntry, updateSpace, duplicateSpace, deleteSpace } = useData();
+  const { showSnackbar } = useSnackbar();
+  const haptic = useHaptic();
   const sp = spaces.find((s) => s.id === spaceId);
 
   const [entrySheetOpen, setEntrySheetOpen] = useState(false);
@@ -65,9 +70,17 @@ export default function SpaceDetail() {
     else await addEntry({ ...fields, spaceId: sp.id });
   }
 
-  async function handleDeleteEntry(id) {
-    if (!confirm('Ștergi această tranzacție?')) return;
-    await deleteEntry(id);
+  async function handleDeleteEntry(entry) {
+    haptic(15);
+    await deleteEntry(entry.id);
+    showSnackbar('Tranzacție ștearsă', {
+      actionLabel: 'Anulează',
+      onAction: async () => {
+        const { id, ...rest } = entry;
+        await addEntry(rest);
+        haptic(10);
+      },
+    });
   }
 
   async function handleDuplicate() {
@@ -172,27 +185,28 @@ export default function SpaceDetail() {
                   <div key={e.id} style={{ position: 'relative', marginBottom: 12 }}>
                     <div style={{
                       position: 'absolute', left: -21, top: 4, width: 10, height: 10, borderRadius: '50%',
-                      background: e.type === 'income' ? 'var(--green)' : 'var(--red)', border: '2px solid var(--bg-0)',
+                      background: e.type === 'income' ? 'var(--green)' : 'var(--red)', border: '2px solid var(--bg-0)', zIndex: 2,
                     }} />
-                    <div style={{
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      background: 'rgba(244,236,219,0.05)', borderRadius: 14, padding: '12px 14px', border: '1px solid var(--line)',
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-                        <div style={{ fontSize: 18, marginRight: 10 }}>{cat.icon}</div>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.desc}</div>
-                          <div style={{ fontSize: 11, color: 'rgba(244,236,219,0.4)' }}>{timeStr} · {cat.label}</div>
+                    <SwipeableRow onDelete={() => handleDeleteEntry(e)}>
+                      <div style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        background: 'rgba(244,236,219,0.05)', borderRadius: 14, padding: '12px 14px', border: '1px solid var(--line)',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                          <div style={{ fontSize: 18, marginRight: 10 }}>{cat.icon}</div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.desc}</div>
+                            <div style={{ fontSize: 11, color: 'rgba(244,236,219,0.4)' }}>{timeStr} · {cat.label}</div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                          <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontWeight: 600, fontSize: 14, color: e.type === 'income' ? '#6fd196' : '#e08672' }}>
+                            {sign}{fmt(e.amount)} {curSuffix(e.currency || 'RON')}
+                          </div>
+                          <button onClick={() => { setEditingEntry(e); setEntrySheetOpen(true); }} style={smallBtnStyle}>✏️</button>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                        <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontWeight: 600, fontSize: 14, color: e.type === 'income' ? '#6fd196' : '#e08672' }}>
-                          {sign}{fmt(e.amount)} {curSuffix(e.currency || 'RON')}
-                        </div>
-                        <button onClick={() => { setEditingEntry(e); setEntrySheetOpen(true); }} style={smallBtnStyle}>✏️</button>
-                        <button onClick={() => handleDeleteEntry(e.id)} style={smallBtnStyle}>✕</button>
-                      </div>
-                    </div>
+                    </SwipeableRow>
                   </div>
                 );
               })}

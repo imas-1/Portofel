@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useData, computeGoalStats, curSuffix } from '../context/DataContext';
+import { useSnackbar } from '../context/SnackbarContext';
+import useHaptic from '../hooks/useHaptic';
 import ContributionSheet from '../components/ContributionSheet';
 import GoalFormSheet from '../components/GoalFormSheet';
 import Confetti from '../components/Confetti';
+import SwipeableRow from '../components/SwipeableRow';
 
 function fmt(n) {
   return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -13,6 +16,8 @@ export default function GoalDetail() {
   const { goalId } = useParams();
   const navigate = useNavigate();
   const { goals, addContribution, deleteContribution, updateGoal, deleteGoal } = useData();
+  const { showSnackbar } = useSnackbar();
+  const haptic = useHaptic();
   const goal = goals.find((g) => g.id === goalId);
 
   const [contribSheetOpen, setContribSheetOpen] = useState(false);
@@ -48,9 +53,16 @@ export default function GoalDetail() {
     await addContribution(goal.id, fields);
   }
 
-  async function handleDeleteContrib(cid) {
-    if (!confirm('Ștergi această contribuție?')) return;
-    await deleteContribution(goal.id, cid);
+  async function handleDeleteContrib(contrib) {
+    haptic(15);
+    await deleteContribution(goal.id, contrib.id);
+    showSnackbar('Contribuție ștearsă', {
+      actionLabel: 'Anulează',
+      onAction: async () => {
+        await addContribution(goal.id, { amount: contrib.amount, note: contrib.note, createdAt: contrib.createdAt });
+        haptic(10);
+      },
+    });
   }
 
   async function handleDelete() {
@@ -113,23 +125,22 @@ export default function GoalDetail() {
       )}
 
       {sortedContribs.map((c) => (
-        <div key={c.id} style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          background: 'rgba(244,236,219,0.05)', borderRadius: 14, padding: '12px 14px', marginBottom: 8, border: '1px solid var(--line)',
-        }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 500 }}>{c.note || 'Contribuție'}</div>
-            <div style={{ fontSize: 11, color: 'rgba(244,236,219,0.4)' }}>
-              {new Date(c.createdAt).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+        <SwipeableRow key={c.id} onDelete={() => handleDeleteContrib(c)}>
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            background: 'rgba(244,236,219,0.05)', borderRadius: 14, padding: '12px 14px', border: '1px solid var(--line)',
+          }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 500 }}>{c.note || 'Contribuție'}</div>
+              <div style={{ fontSize: 11, color: 'rgba(244,236,219,0.4)' }}>
+                {new Date(c.createdAt).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+              </div>
             </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontWeight: 600, color: '#6fd196' }}>
               +{fmt(c.amount)} {curSuffix(goal.currency)}
             </div>
-            <button onClick={() => handleDeleteContrib(c.id)} style={{ background: 'none', border: 'none', color: 'rgba(244,236,219,0.35)', fontSize: 16, cursor: 'pointer' }}>✕</button>
           </div>
-        </div>
+        </SwipeableRow>
       ))}
 
       <button

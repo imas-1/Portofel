@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData, computeGoalStats, curSuffix } from '../context/DataContext';
 import GoalFormSheet from '../components/GoalFormSheet';
+import { SkeletonCard } from '../components/Skeleton';
 
 function fmt(n) {
   return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export default function Goals() {
-  const { goals, createGoal } = useData();
+  const { goals, loaded, createGoal } = useData();
   const navigate = useNavigate();
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -24,13 +25,20 @@ export default function Goals() {
         </div>
       </div>
 
-      {active.length === 0 && completed.length === 0 && (
+      {!loaded && (
+        <>
+          <SkeletonCard />
+          <SkeletonCard />
+        </>
+      )}
+
+      {loaded && active.length === 0 && completed.length === 0 && (
         <div style={{ textAlign: 'center', color: 'rgba(244,236,219,0.4)', padding: '30px 0' }}>
           Niciun obiectiv încă — creează primul mai jos.
         </div>
       )}
 
-      {active.map((g) => (
+      {loaded && active.map((g) => (
         <GoalCard key={g.id} goal={g} onOpen={() => navigate(`/obiective/${g.id}`)} />
       ))}
 
