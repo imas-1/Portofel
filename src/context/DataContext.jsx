@@ -203,11 +203,11 @@ export function DataProvider({ children }) {
   async function deleteGoal(id) {
     return remove(ref(db, `users/${user.uid}/goals/${id}`));
   }
-  async function addContribution(goalId, { amount, note }) {
+  async function addContribution(goalId, { amount, note, createdAt }) {
     const norm = normalizeAmount(amount);
     if (!norm || norm <= 0) throw new Error('Sumă invalidă');
     const contribRef = ref(db, `users/${user.uid}/goals/${goalId}/contributions`);
-    await push(contribRef, { amount: norm, note: note || '', createdAt: Date.now() });
+    await push(contribRef, { amount: norm, note: note || '', createdAt: createdAt || Date.now() });
 
     const goal = goals.find((g) => g.id === goalId);
     if (goal) {
