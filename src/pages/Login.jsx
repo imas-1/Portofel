@@ -61,7 +61,7 @@ export default function Login() {
   }
 
   return (
-    <div className="app-shell" style={{ display: 'flex', alignItems: 'center', minHeight: '100vh' }}>
+    <div className="app-shell" style={{ display: 'flex', alignItems: 'center', minHeight: '100dvh' }}>
       <div
         style={{
           width: '100%',
