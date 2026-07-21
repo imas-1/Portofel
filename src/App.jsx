@@ -1,8 +1,10 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
+import { SnackbarProvider } from './context/SnackbarContext';
 import PrivateRoute from './components/PrivateRoute';
 import BottomNav from './components/BottomNav';
+import UpdatePrompt from './components/UpdatePrompt';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Stats from './pages/Stats';
@@ -18,7 +20,12 @@ function Shell({ children }) {
   const hideNav = location.pathname === '/login';
   return (
     <>
-      {children}
+      {/* key={pathname} forțează un remount la schimbarea rutei, ceea ce declanșează
+          animația .page-transition definită în theme.css — o tranziție fade+slide
+          discretă, fără librării de routing-animation externe. */}
+      <div className="page-transition" key={location.pathname}>
+        {children}
+      </div>
       {!hideNav && <BottomNav />}
     </>
   );
@@ -29,19 +36,22 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <DataProvider>
-          <Shell>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-              <Route path="/statistici" element={<PrivateRoute><Stats /></PrivateRoute>} />
-              <Route path="/calendar" element={<PrivateRoute><Calendar /></PrivateRoute>} />
-              <Route path="/spatii" element={<PrivateRoute><Spaces /></PrivateRoute>} />
-              <Route path="/spatii/:spaceId" element={<PrivateRoute><SpaceDetail /></PrivateRoute>} />
-              <Route path="/obiective" element={<PrivateRoute><Goals /></PrivateRoute>} />
-              <Route path="/obiective/:goalId" element={<PrivateRoute><GoalDetail /></PrivateRoute>} />
-              <Route path="/setari" element={<PrivateRoute><Settings /></PrivateRoute>} />
-            </Routes>
-          </Shell>
+          <SnackbarProvider>
+            <UpdatePrompt />
+            <Shell>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+                <Route path="/statistici" element={<PrivateRoute><Stats /></PrivateRoute>} />
+                <Route path="/calendar" element={<PrivateRoute><Calendar /></PrivateRoute>} />
+                <Route path="/spatii" element={<PrivateRoute><Spaces /></PrivateRoute>} />
+                <Route path="/spatii/:spaceId" element={<PrivateRoute><SpaceDetail /></PrivateRoute>} />
+                <Route path="/obiective" element={<PrivateRoute><Goals /></PrivateRoute>} />
+                <Route path="/obiective/:goalId" element={<PrivateRoute><GoalDetail /></PrivateRoute>} />
+                <Route path="/setari" element={<PrivateRoute><Settings /></PrivateRoute>} />
+              </Routes>
+            </Shell>
+          </SnackbarProvider>
         </DataProvider>
       </AuthProvider>
     </BrowserRouter>
