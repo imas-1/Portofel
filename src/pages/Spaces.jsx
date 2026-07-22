@@ -1,6 +1,7 @@
 import { useMemo, useState, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData, computeSpaceStats, relativeTime } from '../context/DataContext';
+import { useSnackbar } from '../context/SnackbarContext';
 import SpaceFormSheet from '../components/SpaceFormSheet';
 import { SkeletonCard } from '../components/Skeleton';
 import { fmt } from '../utils/format';
@@ -26,11 +27,13 @@ function sortSpaces(list, sortVal, entries) {
 
 export default function Spaces() {
   const { spaces, entries, loaded, createSpace, updateSpace, duplicateSpace, deleteSpace } = useData();
+  const { showSnackbar } = useSnackbar();
   const navigate = useNavigate();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingSpace, setEditingSpace] = useState(null);
   const [sortBy, setSortBy] = useState('recent');
   const [showArchived, setShowArchived] = useState(false);
+  const [archivingIds, setArchivingIds] = useState(() => new Set());
   const [menuOpenId, setMenuOpenId] = useState(null);
 
   const active = useMemo(() => sortSpaces(spaces.filter((s) => !s.archived), sortBy, entries), [spaces, sortBy, entries]);
@@ -44,11 +47,22 @@ export default function Spaces() {
   async function handleDuplicate(id) {
     setMenuOpenId(null);
     await duplicateSpace(id);
+    showSnackbar('Spațiu duplicat');
   }
 
   async function handleArchiveToggle(sp) {
     setMenuOpenId(null);
-    await updateSpace(sp.id, { archived: !sp.archived });
+    const willArchive = !sp.archived;
+    setArchivingIds((prev) => new Set(prev).add(sp.id));
+    setTimeout(async () => {
+      await updateSpace(sp.id, { archived: willArchive });
+      setArchivingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(sp.id);
+        return next;
+      });
+      showSnackbar(willArchive ? 'Spațiu arhivat' : 'Spațiu restaurat');
+    }, 230);
   }
 
   async function handleDelete(sp) {
@@ -98,18 +112,19 @@ export default function Spaces() {
       )}
 
       {loaded && active.map((sp) => (
-        <SpaceCard
-          key={sp.id}
-          sp={sp}
-          entries={entries}
-          menuOpen={menuOpenId === sp.id}
-          onToggleMenu={() => setMenuOpenId(menuOpenId === sp.id ? null : sp.id)}
-          onOpen={() => navigate(`/spatii/${sp.id}`)}
-          onEdit={() => openEdit(sp)}
-          onDuplicate={() => handleDuplicate(sp.id)}
-          onArchive={() => handleArchiveToggle(sp)}
-          onDelete={() => handleDelete(sp)}
-        />
+        <div key={sp.id} className={`collapse-wrap ${archivingIds.has(sp.id) ? 'row-collapsing' : ''}`}>
+          <SpaceCard
+            sp={sp}
+            entries={entries}
+            menuOpen={menuOpenId === sp.id}
+            onToggleMenu={() => setMenuOpenId(menuOpenId === sp.id ? null : sp.id)}
+            onOpen={() => navigate(`/spatii/${sp.id}`)}
+            onEdit={() => openEdit(sp)}
+            onDuplicate={() => handleDuplicate(sp.id)}
+            onArchive={() => handleArchiveToggle(sp)}
+            onDelete={() => handleDelete(sp)}
+          />
+        </div>
       ))}
 
       <button type="button" onClick={openCreate} style={newSpaceBtnStyle}>
@@ -130,19 +145,20 @@ export default function Spaces() {
             🗄️ Spații arhivate ({archived.length}) {showArchived ? '▴' : '▾'}
           </button>
           {showArchived && archived.map((sp) => (
-            <SpaceCard
-              key={sp.id}
-              sp={sp}
-              entries={entries}
-              dimmed
-              menuOpen={menuOpenId === sp.id}
-              onToggleMenu={() => setMenuOpenId(menuOpenId === sp.id ? null : sp.id)}
-              onOpen={() => navigate(`/spatii/${sp.id}`)}
-              onEdit={() => openEdit(sp)}
-              onDuplicate={() => handleDuplicate(sp.id)}
-              onArchive={() => handleArchiveToggle(sp)}
-              onDelete={() => handleDelete(sp)}
-            />
+            <div key={sp.id} className={`collapse-wrap ${archivingIds.has(sp.id) ? 'row-collapsing' : ''}`}>
+              <SpaceCard
+                sp={sp}
+                entries={entries}
+                dimmed
+                menuOpen={menuOpenId === sp.id}
+                onToggleMenu={() => setMenuOpenId(menuOpenId === sp.id ? null : sp.id)}
+                onOpen={() => navigate(`/spatii/${sp.id}`)}
+                onEdit={() => openEdit(sp)}
+                onDuplicate={() => handleDuplicate(sp.id)}
+                onArchive={() => handleArchiveToggle(sp)}
+                onDelete={() => handleDelete(sp)}
+              />
+            </div>
           ))}
         </div>
       )}

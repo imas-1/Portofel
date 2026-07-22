@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useData, CATEGORIES, CAT_MAP, curSuffix } from '../context/DataContext';
+import { useData, CATEGORIES, CAT_MAP, curSuffix, suggestCategory } from '../context/DataContext';
 import { useSnackbar } from '../context/SnackbarContext';
 import useCountUp from '../hooks/useCountUp';
 import useTransactionFilters from '../hooks/useTransactionFilters';
@@ -9,7 +9,7 @@ import AmountInput, { parseAmountInput } from '../components/AmountInput';
 import FilterPanel from '../components/FilterPanel';
 import SwipeableRow from '../components/SwipeableRow';
 import SkeletonList from '../components/Skeleton';
-import { fmt, monthKey, computeMethodTotals } from '../utils/format';
+import { fmt, monthKey } from '../utils/format';
 import CurrencySwitch from '../components/CurrencySwitch';
 
 function currentMonthKey() {
@@ -30,6 +30,7 @@ export default function Dashboard() {
   const [currency, setCurrency] = useState('RON');
   const [type, setType] = useState('income');
   const [category, setCategory] = useState('salariu');
+  const [categoryTouched, setCategoryTouched] = useState(false);
   const [method, setMethod] = useState('card');
   const [amount, setAmount] = useState('');
   const [desc, setDesc] = useState('');
@@ -48,7 +49,6 @@ export default function Dashboard() {
   const expense = curEntries.filter((e) => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
   const balance = income - expense;
   const animatedBalance = useCountUp(balance);
-  const { card: cardBalance, cash: cashBalance } = useMemo(() => computeMethodTotals(curEntries), [curEntries]);
 
   // Economii luna aceasta + comparație cu luna trecută
   const thisMonthKey = currentMonthKey();
@@ -111,6 +111,7 @@ export default function Dashboard() {
       }
       setAmount('');
       setDesc('');
+      setCategoryTouched(false);
       haptic(12);
       setSavedPulse(true);
       setTimeout(() => setSavedPulse(false), 700);
@@ -126,6 +127,7 @@ export default function Dashboard() {
     setEditingId(entry.id);
     setType(entry.type);
     setCategory(entry.category);
+    setCategoryTouched(true);
     setMethod(entry.method || 'card');
     setAmount(String(entry.amount));
     setDesc(entry.desc || '');
@@ -137,6 +139,7 @@ export default function Dashboard() {
     setAmount('');
     setDesc('');
     setError('');
+    setCategoryTouched(false);
   }
 
   async function handleDelete(entry) {
@@ -185,13 +188,6 @@ export default function Dashboard() {
             <div className="stub-label">Cheltuit</div>
             <div className="stub-value">{fmt(expense)}</div>
           </div>
-        </div>
-        <div style={{
-          display: 'flex', gap: 14, marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--line)',
-          fontSize: 12, color: 'rgba(244,236,219,0.5)',
-        }}>
-          <span>💳 Card: <span style={{ color: 'rgba(244,236,219,0.75)', fontWeight: 600 }}>{fmt(cardBalance)} {curSuffix(currency)}</span></span>
-          <span>💵 Cash: <span style={{ color: 'rgba(244,236,219,0.75)', fontWeight: 600 }}>{fmt(cashBalance)} {curSuffix(currency)}</span></span>
         </div>
       </div>
 
@@ -251,7 +247,7 @@ export default function Dashboard() {
             <button
               type="button"
               key={c.id}
-              onClick={() => setCategory(c.id)}
+              onClick={() => { setCategory(c.id); setCategoryTouched(true); }}
               style={{
                 flexShrink: 0, padding: '8px 13px', borderRadius: 20, whiteSpace: 'nowrap', cursor: 'pointer',
                 border: '1px solid var(--line)', transition: 'background .15s, color .15s',
@@ -271,7 +267,20 @@ export default function Dashboard() {
         </div>
 
         <AmountInput value={amount} onChange={setAmount} placeholder="Sumă" />
-        <input type="text" placeholder="Descriere (opțional)" value={desc} onChange={(e) => setDesc(e.target.value)} maxLength={80} />
+        <input
+          type="text"
+          placeholder="Descriere (opțional)"
+          value={desc}
+          onChange={(e) => {
+            const val = e.target.value;
+            setDesc(val);
+            if (!categoryTouched) {
+              const suggestion = suggestCategory(val);
+              if (suggestion) setCategory(suggestion);
+            }
+          }}
+          maxLength={80}
+        />
         {error && <div className="error-msg">{error}</div>}
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="submit" className={`btn-primary ${savedPulse ? 'btn-pulse' : ''}`} disabled={busy} style={{ flex: 1 }}>
