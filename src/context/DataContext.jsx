@@ -19,6 +19,29 @@ export const CATEGORIES = [
 ];
 export const CAT_MAP = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
 
+/** Cuvinte cheie frecvente pentru sugestia automată de categorie din descriere. */
+const CATEGORY_KEYWORDS = {
+  mancare: ['kaufland', 'lidl', 'mega image', 'carrefour', 'penny', 'profi', 'auchan', 'restaurant', 'shaorma', 'pizza', 'glovo', 'tazz', 'bolt food', 'mancare', 'cafea', 'starbucks', 'mcdonald', 'kfc'],
+  transport: ['uber', 'bolt', 'benzina', 'motorina', 'combustibil', 'parcare', 'stb', 'metrou', 'taxi', 'ratb', 'cfr', 'blablacar'],
+  facturi: ['factura', 'enel', 'engie', 'digi', 'vodafone', 'orange', 'telekom', 'apa', 'gaze', 'curent', 'internet'],
+  chirie: ['chirie', 'rent'],
+  sanatate: ['farmacie', 'medic', 'doctor', 'spital', 'sanatate', 'dentist', 'analize'],
+  distractie: ['netflix', 'cinema', 'spotify', 'hbo', 'concert', 'bar', 'club', 'jocuri', 'steam'],
+  cumparaturi: ['haine', 'zara', 'h&m', 'emag', 'amazon', 'ikea', 'shopping'],
+  cadouri: ['cadou', 'gift'],
+  salariu: ['salariu', 'salary', 'bonus'],
+};
+
+/** Sugerează un id de categorie pe baza cuvintelor din descrierea introdusă. Null dacă nu găsește potrivire. */
+export function suggestCategory(desc) {
+  if (!desc) return null;
+  const text = desc.toLowerCase();
+  for (const [catId, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (keywords.some((kw) => text.includes(kw))) return catId;
+  }
+  return null;
+}
+
 export const CURRENCIES = [
   { id: 'RON', label: 'Lei', suffix: 'lei' },
   { id: 'EUR', label: 'Euro', suffix: '€' },
