@@ -3,29 +3,11 @@ import { useData, CATEGORIES, CAT_MAP, curSuffix } from '../context/DataContext'
 import PieChart from '../components/charts/PieChart';
 import BarChart from '../components/charts/BarChart';
 import LineChart from '../components/charts/LineChart';
+import { fmt, monthKey, last6Months, dayKey, computeMethodTotals } from '../utils/format';
+import CurrencySwitch from '../components/CurrencySwitch';
 
 const PALETTE = ['#c99a3e', '#3f8f5f', '#4f7cd6', '#b0503f', '#8b5fbf', '#3ba7a0', '#d68a4c', '#6b8e4e', '#a4577a', '#5a7d9a'];
 
-function fmt(n) {
-  return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-function monthKey(ts) {
-  const d = new Date(ts);
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-}
-const MONTH_NAMES = ['ian', 'feb', 'mar', 'apr', 'mai', 'iun', 'iul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-function last6Months() {
-  const now = new Date();
-  const months = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push({ key: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'), label: MONTH_NAMES[d.getMonth()] });
-  }
-  return months;
-}
-function dayKey(ts) {
-  return new Date(ts).toISOString().slice(0, 10);
-}
 function last30Days() {
   const days = [];
   for (let i = 29; i >= 0; i--) {
@@ -76,12 +58,48 @@ export default function Stats() {
   const topCategoryId = Object.keys(categoryTotals).sort((a, b) => categoryTotals[b] - categoryTotals[a])[0];
   const topCategory = topCategoryId ? CAT_MAP[topCategoryId] : null;
 
+  const { card: cardBalance, cash: cashBalance } = useMemo(() => computeMethodTotals(curEntries), [curEntries]);
+  const methodTotal = Math.abs(cardBalance) + Math.abs(cashBalance);
+  const cardPct = methodTotal > 0 ? Math.round((Math.abs(cardBalance) / methodTotal) * 100) : 50;
+  const cashPct = 100 - cardPct;
+
+  const preferredMethod = useMemo(() => {
+    let cardCount = 0, cashCount = 0;
+    curEntries.forEach((e) => { if (e.method === 'cash') cashCount++; else cardCount++; });
+    if (cardCount === 0 && cashCount === 0) return null;
+    return cardCount >= cashCount
+      ? { label: 'Card', icon: '💳', count: cardCount }
+      : { label: 'Cash', icon: '💵', count: cashCount };
+  }, [curEntries]);
+
+  const { topExpenseDay, topIncomeDay } = useMemo(() => {
+    const expenseByDay = {};
+    const incomeByDay = {};
+    curEntries.forEach((e) => {
+      const k = dayKey(e.createdAt);
+      if (e.type === 'expense') expenseByDay[k] = (expenseByDay[k] || 0) + e.amount;
+      else incomeByDay[k] = (incomeByDay[k] || 0) + e.amount;
+    });
+    const bestExpenseKey = Object.keys(expenseByDay).sort((a, b) => expenseByDay[b] - expenseByDay[a])[0];
+    const bestIncomeKey = Object.keys(incomeByDay).sort((a, b) => incomeByDay[b] - incomeByDay[a])[0];
+    const fmtDay = (k) => k ? new Date(k).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' }) : null;
+    return {
+      topExpenseDay: bestExpenseKey ? { date: fmtDay(bestExpenseKey), amount: expenseByDay[bestExpenseKey] } : null,
+      topIncomeDay: bestIncomeKey ? { date: fmtDay(bestIncomeKey), amount: incomeByDay[bestIncomeKey] } : null,
+    };
+  }, [curEntries]);
+
   const pieData = CATEGORIES.filter((c) => categoryTotals[c.id] > 0).map((c, i) => ({
     label: c.label,
     icon: c.icon,
     value: categoryTotals[c.id],
     color: PALETTE[CATEGORIES.indexOf(c) % PALETTE.length],
   }));
+
+  const methodPieData = useMemo(() => ([
+    { label: 'Card', icon: '💳', value: Math.abs(cardBalance), color: '#c99a3e' },
+    { label: 'Cash', icon: '💵', value: Math.abs(cashBalance), color: '#3f8f5f' },
+  ]), [cardBalance, cashBalance]);
 
   const monthlyComparison = useMemo(() => {
     return last6Months().map((m) => ({
@@ -111,25 +129,10 @@ export default function Stats() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-        {['RON', 'EUR'].map((c) => (
-          <button
-            key={c}
-            onClick={() => setCurrency(c)}
-            style={{
-              padding: '6px 16px', borderRadius: 20, cursor: 'pointer', fontWeight: 700, fontSize: 12.5,
-              border: '1.5px solid rgba(244,236,219,0.25)',
-              background: currency === c ? 'var(--brass)' : 'transparent',
-              color: currency === c ? '#2a1e08' : 'rgba(244,236,219,0.6)',
-            }}
-          >
-            {c === 'RON' ? 'Lei' : 'Euro'}
-          </button>
-        ))}
-      </div>
+      <CurrencySwitch currency={currency} onChange={setCurrency} marginBottom={16} />
 
       {/* Carduri sumar */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+      <div className="currency-fade" key={currency} style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
         <div className="mini-stat-card stagger-card">
           <div className="mini-stat-label">Economii totale</div>
           <div className="mini-stat-value" style={{ color: totalSavings < 0 ? 'var(--red)' : 'var(--green)' }}>
@@ -177,6 +180,58 @@ export default function Stats() {
           </div>
         </div>
       )}
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+        <div className="mini-stat-card stagger-card">
+          <div className="mini-stat-label">📅 Ziua cu cele mai multe cheltuieli</div>
+          {topExpenseDay ? (
+            <>
+              <div className="mini-stat-value" style={{ color: '#e08672', fontSize: 15 }}>{fmt(topExpenseDay.amount)} {curSuffix(currency)}</div>
+              <div className="mini-stat-sub">{topExpenseDay.date}</div>
+            </>
+          ) : <div className="mini-stat-sub">—</div>}
+        </div>
+        <div className="mini-stat-card stagger-card">
+          <div className="mini-stat-label">📅 Ziua cu cele mai multe venituri</div>
+          {topIncomeDay ? (
+            <>
+              <div className="mini-stat-value" style={{ color: '#6fd196', fontSize: 15 }}>{fmt(topIncomeDay.amount)} {curSuffix(currency)}</div>
+              <div className="mini-stat-sub">{topIncomeDay.date}</div>
+            </>
+          ) : <div className="mini-stat-sub">—</div>}
+        </div>
+      </div>
+
+      {preferredMethod && (
+        <div className="card stagger-card" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ fontSize: 26 }}>{preferredMethod.icon}</div>
+          <div>
+            <div style={{ fontSize: 11, color: 'rgba(244,236,219,0.45)', textTransform: 'uppercase', letterSpacing: 1 }}>Metoda preferată</div>
+            <div style={{ fontWeight: 600 }}>{preferredMethod.label} — {preferredMethod.count} tranzacții</div>
+          </div>
+        </div>
+      )}
+
+      {/* Distribuția banilor: Card vs Cash */}
+      <div style={{ fontSize: 11, color: 'rgba(244,236,219,0.45)', textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 600, margin: '18px 0 10px' }}>
+        💳 Distribuția banilor
+      </div>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+        <div className="mini-stat-card stagger-card">
+          <div className="mini-stat-label">💳 Card</div>
+          <div className="mini-stat-value" style={{ color: '#c99a3e' }}>{fmt(cardBalance)} {curSuffix(currency)}</div>
+          <div className="mini-stat-sub">{cardPct}%</div>
+        </div>
+        <div className="mini-stat-card stagger-card">
+          <div className="mini-stat-label">💵 Cash</div>
+          <div className="mini-stat-value" style={{ color: '#3f8f5f' }}>{fmt(cashBalance)} {curSuffix(currency)}</div>
+          <div className="mini-stat-sub">{cashPct}%</div>
+        </div>
+      </div>
+      <div className="card stagger-card">
+        <div className="chart-title-row">Card vs Cash</div>
+        <PieChart data={methodPieData} />
+      </div>
 
       <div className="card stagger-card">
         <div className="chart-title-row">Cheltuieli pe categorii</div>

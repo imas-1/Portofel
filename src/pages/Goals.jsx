@@ -1,12 +1,9 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData, computeGoalStats, curSuffix } from '../context/DataContext';
 import GoalFormSheet from '../components/GoalFormSheet';
 import { SkeletonCard } from '../components/Skeleton';
-
-function fmt(n) {
-  return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+import { fmt } from '../utils/format';
 
 export default function Goals() {
   const { goals, loaded, createGoal } = useData();
@@ -34,6 +31,7 @@ export default function Goals() {
 
       {loaded && active.length === 0 && completed.length === 0 && (
         <div style={{ textAlign: 'center', color: 'rgba(244,236,219,0.4)', padding: '30px 0' }}>
+          <div className="empty-state-icon" style={{ fontSize: 28, marginBottom: 6 }}>🎯</div>
           Niciun obiectiv încă — creează primul mai jos.
         </div>
       )}
@@ -60,7 +58,7 @@ export default function Goals() {
   );
 }
 
-function GoalCard({ goal, onOpen, dimmed }) {
+const GoalCard = memo(function GoalCard({ goal, onOpen, dimmed }) {
   const stats = computeGoalStats(goal);
   return (
     <div
@@ -100,7 +98,7 @@ function GoalCard({ goal, onOpen, dimmed }) {
       <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(244,236,219,0.6)', marginTop: 6 }}>{stats.pct}%</div>
     </div>
   );
-}
+});
 
 const newBtnStyle = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%',

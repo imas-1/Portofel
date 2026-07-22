@@ -1,18 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useData, CAT_MAP, curSuffix } from '../context/DataContext';
+import { fmt, dayKey, MONTH_NAMES_FULL } from '../utils/format';
+import CurrencySwitch from '../components/CurrencySwitch';
 
-const MONTH_NAMES_FULL = [
-  'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
-  'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie',
-];
 const WEEKDAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
-function fmt(n) {
-  return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-function dayKey(ts) {
-  return new Date(ts).toISOString().slice(0, 10);
-}
 function isoOf(y, m, d) {
   return new Date(y, m, d).toISOString().slice(0, 10);
 }
@@ -97,22 +89,7 @@ export default function Calendar() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-        {['RON', 'EUR'].map((c) => (
-          <button
-            key={c}
-            onClick={() => setCurrency(c)}
-            style={{
-              padding: '6px 16px', borderRadius: 20, cursor: 'pointer', fontWeight: 700, fontSize: 12.5,
-              border: '1.5px solid rgba(244,236,219,0.25)',
-              background: currency === c ? 'var(--brass)' : 'transparent',
-              color: currency === c ? '#2a1e08' : 'rgba(244,236,219,0.6)',
-            }}
-          >
-            {c === 'RON' ? 'Lei' : 'Euro'}
-          </button>
-        ))}
-      </div>
+      <CurrencySwitch currency={currency} onChange={setCurrency} />
 
       <div className="card stagger-card">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -189,6 +166,7 @@ export default function Calendar() {
 
       {selectedDayEntries.length === 0 && (
         <div style={{ textAlign: 'center', color: 'rgba(244,236,219,0.4)', padding: '24px 0', border: '1px dashed var(--line)', borderRadius: 14 }}>
+          <div className="empty-state-icon" style={{ fontSize: 28, marginBottom: 6 }}>📅</div>
           Nicio tranzacție în această zi
         </div>
       )}

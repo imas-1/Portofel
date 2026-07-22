@@ -11,7 +11,7 @@ export default function Settings() {
   const { logout, user } = useAuth();
   const { entries, spaces, goals, restoreBackup } = useData();
   const { theme, toggleTheme } = useTheme();
-  const { hasPin, biometricEnabled, removePin, toggleBiometric } = useSecurity();
+  const { hasPin, removePin } = useSecurity();
   const { showSnackbar } = useSnackbar();
   const [pinSheetOpen, setPinSheetOpen] = useState(false);
   const [restoring, setRestoring] = useState(false);
@@ -89,13 +89,6 @@ export default function Settings() {
             )
           }
         />
-        {hasPin && (
-          <SettingsRow
-            label="Face ID / amprentă"
-            desc="Beta — necesită suport WebAuthn pe dispozitiv"
-            action={<Toggle checked={biometricEnabled} onChange={toggleBiometric} />}
-          />
-        )}
       </div>
 
       {/* ---------- Aspect ---------- */}

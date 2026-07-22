@@ -1,12 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData, computeSpaceStats, relativeTime } from '../context/DataContext';
 import SpaceFormSheet from '../components/SpaceFormSheet';
 import { SkeletonCard } from '../components/Skeleton';
-
-function fmt(n) {
-  return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+import { fmt } from '../utils/format';
 
 function sortSpaces(list, sortVal, entries) {
   const withStats = list.map((sp) => ({ sp, stats: computeSpaceStats(entries, sp.id) }));
@@ -155,7 +152,7 @@ export default function Spaces() {
   );
 }
 
-function SpaceCard({ sp, entries, dimmed, menuOpen, onToggleMenu, onOpen, onEdit, onDuplicate, onArchive, onDelete }) {
+const SpaceCard = memo(function SpaceCard({ sp, entries, dimmed, menuOpen, onToggleMenu, onOpen, onEdit, onDuplicate, onArchive, onDelete }) {
   const stats = computeSpaceStats(entries, sp.id);
   const pct = sp.budget ? Math.min(999, Math.round((stats.spent / sp.budget) * 100)) : null;
   const overBudget = sp.budget && stats.spent > sp.budget;
@@ -239,7 +236,7 @@ function SpaceCard({ sp, entries, dimmed, menuOpen, onToggleMenu, onOpen, onEdit
       )}
     </div>
   );
-}
+});
 
 function MenuItem({ label, onClick, danger }) {
   return (

@@ -6,10 +6,7 @@ import useHaptic from '../hooks/useHaptic';
 import SpaceEntrySheet from '../components/SpaceEntrySheet';
 import SpaceFormSheet from '../components/SpaceFormSheet';
 import SwipeableRow from '../components/SwipeableRow';
-
-function fmt(n) {
-  return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+import { fmt } from '../utils/format';
 
 function dayLabel(ts) {
   const d = new Date(ts);
@@ -34,6 +31,7 @@ export default function SpaceDetail() {
   const [editingEntry, setEditingEntry] = useState(null);
   const [formSheetOpen, setFormSheetOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [removingIds, setRemovingIds] = useState(() => new Set());
 
   const stats = useMemo(() => (sp ? computeSpaceStats(entries, sp.id) : null), [entries, sp]);
 
@@ -72,15 +70,18 @@ export default function SpaceDetail() {
 
   async function handleDeleteEntry(entry) {
     haptic(15);
-    await deleteEntry(entry.id);
-    showSnackbar('Tranzacție ștearsă', {
-      actionLabel: 'Anulează',
-      onAction: async () => {
-        const { id, ...rest } = entry;
-        await addEntry(rest);
-        haptic(10);
-      },
-    });
+    setRemovingIds((prev) => new Set(prev).add(entry.id));
+    setTimeout(async () => {
+      await deleteEntry(entry.id);
+      showSnackbar('Tranzacție ștearsă', {
+        actionLabel: 'Anulează',
+        onAction: async () => {
+          const { id, ...rest } = entry;
+          await addEntry(rest);
+          haptic(10);
+        },
+      });
+    }, 230);
   }
 
   async function handleDuplicate() {
@@ -166,6 +167,7 @@ export default function SpaceDetail() {
 
       {groupedByDay.length === 0 && (
         <div style={{ textAlign: 'center', color: 'rgba(244,236,219,0.4)', padding: '30px 0', border: '1px dashed var(--line)', borderRadius: 14 }}>
+          <div className="empty-state-icon" style={{ fontSize: 28, marginBottom: 6 }}>📖</div>
           Nicio tranzacție încă în acest spațiu
         </div>
       )}
@@ -187,7 +189,7 @@ export default function SpaceDetail() {
                       position: 'absolute', left: -21, top: 4, width: 10, height: 10, borderRadius: '50%',
                       background: e.type === 'income' ? 'var(--green)' : 'var(--red)', border: '2px solid var(--bg-0)', zIndex: 2,
                     }} />
-                    <SwipeableRow onDelete={() => handleDeleteEntry(e)}>
+                    <SwipeableRow onDelete={() => handleDeleteEntry(e)} onEdit={() => { setEditingEntry(e); setEntrySheetOpen(true); }} collapsing={removingIds.has(e.id)}>
                       <div style={{
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                         background: 'rgba(244,236,219,0.05)', borderRadius: 14, padding: '12px 14px', border: '1px solid var(--line)',

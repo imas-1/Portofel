@@ -7,10 +7,7 @@ import ContributionSheet from '../components/ContributionSheet';
 import GoalFormSheet from '../components/GoalFormSheet';
 import Confetti from '../components/Confetti';
 import SwipeableRow from '../components/SwipeableRow';
-
-function fmt(n) {
-  return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+import { fmt } from '../utils/format';
 
 export default function GoalDetail() {
   const { goalId } = useParams();
@@ -25,6 +22,7 @@ export default function GoalDetail() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [wasCompleted, setWasCompleted] = useState(goal?.completed || false);
+  const [removingIds, setRemovingIds] = useState(() => new Set());
 
   useEffect(() => {
     if (goal && goal.completed && !wasCompleted) {
@@ -55,14 +53,17 @@ export default function GoalDetail() {
 
   async function handleDeleteContrib(contrib) {
     haptic(15);
-    await deleteContribution(goal.id, contrib.id);
-    showSnackbar('Contribuție ștearsă', {
-      actionLabel: 'Anulează',
-      onAction: async () => {
-        await addContribution(goal.id, { amount: contrib.amount, note: contrib.note, createdAt: contrib.createdAt });
-        haptic(10);
-      },
-    });
+    setRemovingIds((prev) => new Set(prev).add(contrib.id));
+    setTimeout(async () => {
+      await deleteContribution(goal.id, contrib.id);
+      showSnackbar('Contribuție ștearsă', {
+        actionLabel: 'Anulează',
+        onAction: async () => {
+          await addContribution(goal.id, { amount: contrib.amount, note: contrib.note, createdAt: contrib.createdAt });
+          haptic(10);
+        },
+      });
+    }, 230);
   }
 
   async function handleDelete() {
@@ -120,12 +121,13 @@ export default function GoalDetail() {
 
       {sortedContribs.length === 0 && (
         <div style={{ textAlign: 'center', color: 'rgba(244,236,219,0.4)', padding: '30px 0', border: '1px dashed var(--line)', borderRadius: 14 }}>
+          <div className="empty-state-icon" style={{ fontSize: 28, marginBottom: 6 }}>🪙</div>
           Nicio contribuție încă
         </div>
       )}
 
       {sortedContribs.map((c) => (
-        <SwipeableRow key={c.id} onDelete={() => handleDeleteContrib(c)}>
+        <SwipeableRow key={c.id} onDelete={() => handleDeleteContrib(c)} collapsing={removingIds.has(c.id)}>
           <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             background: 'rgba(244,236,219,0.05)', borderRadius: 14, padding: '12px 14px', border: '1px solid var(--line)',

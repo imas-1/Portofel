@@ -9,15 +9,8 @@ import AmountInput, { parseAmountInput } from '../components/AmountInput';
 import FilterPanel from '../components/FilterPanel';
 import SwipeableRow from '../components/SwipeableRow';
 import SkeletonList from '../components/Skeleton';
-
-function fmt(n) {
-  return n.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function monthKey(ts) {
-  const d = new Date(ts);
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-}
+import { fmt, monthKey, computeMethodTotals } from '../utils/format';
+import CurrencySwitch from '../components/CurrencySwitch';
 
 function currentMonthKey() {
   return monthKey(Date.now());
@@ -30,7 +23,7 @@ function previousMonthKey() {
 }
 
 export default function Dashboard() {
-  const { entries, spaces, loaded, addEntry, deleteEntry } = useData();
+  const { entries, spaces, loaded, addEntry, editEntry, deleteEntry } = useData();
   const { showSnackbar } = useSnackbar();
   const haptic = useHaptic();
   const { active: ptrActive, refreshing: ptrRefreshing, handlers: ptrHandlers } = usePullToRefresh();
@@ -42,6 +35,9 @@ export default function Dashboard() {
   const [desc, setDesc] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [savedPulse, setSavedPulse] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [removingIds, setRemovingIds] = useState(() => new Set());
 
   const curEntries = useMemo(
     () => entries.filter((e) => (e.currency || 'RON') === currency && !e.isTransfer),
@@ -52,34 +48,46 @@ export default function Dashboard() {
   const expense = curEntries.filter((e) => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
   const balance = income - expense;
   const animatedBalance = useCountUp(balance);
+  const { card: cardBalance, cash: cashBalance } = useMemo(() => computeMethodTotals(curEntries), [curEntries]);
 
   // Economii luna aceasta + comparație cu luna trecută
   const thisMonthKey = currentMonthKey();
   const prevMonthKey = previousMonthKey();
-  const thisMonthEntries = curEntries.filter((e) => monthKey(e.createdAt) === thisMonthKey);
-  const prevMonthEntries = curEntries.filter((e) => monthKey(e.createdAt) === prevMonthKey);
+  const thisMonthEntries = useMemo(
+    () => curEntries.filter((e) => monthKey(e.createdAt) === thisMonthKey),
+    [curEntries, thisMonthKey]
+  );
+  const prevMonthEntries = useMemo(
+    () => curEntries.filter((e) => monthKey(e.createdAt) === prevMonthKey),
+    [curEntries, prevMonthKey]
+  );
 
-  const thisMonthSavings =
-    thisMonthEntries.filter((e) => e.type === 'income').reduce((s, e) => s + e.amount, 0) -
-    thisMonthEntries.filter((e) => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
-  const prevMonthSavings =
-    prevMonthEntries.filter((e) => e.type === 'income').reduce((s, e) => s + e.amount, 0) -
-    prevMonthEntries.filter((e) => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
-  const savingsDelta = thisMonthSavings - prevMonthSavings;
+  const { thisMonthSavings, prevMonthSavings, savingsDelta } = useMemo(() => {
+    const thisMonthSavings =
+      thisMonthEntries.filter((e) => e.type === 'income').reduce((s, e) => s + e.amount, 0) -
+      thisMonthEntries.filter((e) => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
+    const prevMonthSavings =
+      prevMonthEntries.filter((e) => e.type === 'income').reduce((s, e) => s + e.amount, 0) -
+      prevMonthEntries.filter((e) => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
+    return { thisMonthSavings, prevMonthSavings, savingsDelta: thisMonthSavings - prevMonthSavings };
+  }, [thisMonthEntries, prevMonthEntries]);
 
   // Ultima tranzacție
   const lastTransaction = [...curEntries].sort((a, b) => b.createdAt - a.createdAt)[0];
 
   // Rezumatul lunii: nr. tranzacții, medie zilnică cheltuită, categoria principală
   const daysSoFar = new Date().getDate();
-  const thisMonthExpense = thisMonthEntries.filter((e) => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
-  const dailyAvg = daysSoFar > 0 ? thisMonthExpense / daysSoFar : 0;
-  const categoryTotals = {};
-  thisMonthEntries.filter((e) => e.type === 'expense').forEach((e) => {
-    categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount;
-  });
-  const topCategoryId = Object.keys(categoryTotals).sort((a, b) => categoryTotals[b] - categoryTotals[a])[0];
-  const topCategory = topCategoryId ? CAT_MAP[topCategoryId] : null;
+  const { dailyAvg, categoryTotals, topCategory } = useMemo(() => {
+    const thisMonthExpense = thisMonthEntries.filter((e) => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
+    const dailyAvg = daysSoFar > 0 ? thisMonthExpense / daysSoFar : 0;
+    const categoryTotals = {};
+    thisMonthEntries.filter((e) => e.type === 'expense').forEach((e) => {
+      categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount;
+    });
+    const topCategoryId = Object.keys(categoryTotals).sort((a, b) => categoryTotals[b] - categoryTotals[a])[0];
+    const topCategory = topCategoryId ? CAT_MAP[topCategoryId] : null;
+    return { dailyAvg, categoryTotals, topCategory };
+  }, [thisMonthEntries, daysSoFar]);
 
   const { filters, setFilter, reset: resetFilters, filtered, activeCount } = useTransactionFilters(curEntries);
   const [showFilters, setShowFilters] = useState(false);
@@ -95,10 +103,17 @@ export default function Dashboard() {
     }
     setBusy(true);
     try {
-      await addEntry({ type, amount: val, category, method, currency, desc });
+      if (editingId) {
+        await editEntry(editingId, { type, amount: val, category, method, currency, desc });
+        setEditingId(null);
+      } else {
+        await addEntry({ type, amount: val, category, method, currency, desc });
+      }
       setAmount('');
       setDesc('');
       haptic(12);
+      setSavedPulse(true);
+      setTimeout(() => setSavedPulse(false), 700);
       if (document.activeElement) document.activeElement.blur(); // închide tastatura
     } catch (err) {
       setError(err.message);
@@ -107,17 +122,37 @@ export default function Dashboard() {
     }
   }
 
+  function handleEditStart(entry) {
+    setEditingId(entry.id);
+    setType(entry.type);
+    setCategory(entry.category);
+    setMethod(entry.method || 'card');
+    setAmount(String(entry.amount));
+    setDesc(entry.desc || '');
+    haptic(10);
+  }
+
+  function handleCancelEdit() {
+    setEditingId(null);
+    setAmount('');
+    setDesc('');
+    setError('');
+  }
+
   async function handleDelete(entry) {
     haptic(15);
-    await deleteEntry(entry.id);
-    showSnackbar('Tranzacție ștearsă', {
-      actionLabel: 'Anulează',
-      onAction: async () => {
-        const { id, ...rest } = entry;
-        await addEntry(rest);
-        haptic(10);
-      },
-    });
+    setRemovingIds((prev) => new Set(prev).add(entry.id));
+    setTimeout(async () => {
+      await deleteEntry(entry.id);
+      showSnackbar('Tranzacție ștearsă', {
+        actionLabel: 'Anulează',
+        onAction: async () => {
+          const { id, ...rest } = entry;
+          await addEntry(rest);
+          haptic(10);
+        },
+      });
+    }, 230);
   }
 
   return (
@@ -132,24 +167,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-        {['RON', 'EUR'].map((c) => (
-          <button
-            key={c}
-            onClick={() => setCurrency(c)}
-            style={{
-              padding: '6px 16px', borderRadius: 20, cursor: 'pointer', fontWeight: 700, fontSize: 12.5,
-              border: '1.5px solid rgba(244,236,219,0.25)', transition: 'background .15s, color .15s',
-              background: currency === c ? 'var(--brass)' : 'transparent',
-              color: currency === c ? '#2a1e08' : 'rgba(244,236,219,0.6)',
-            }}
-          >
-            {c === 'RON' ? 'Lei' : 'Euro'}
-          </button>
-        ))}
-      </div>
+      <CurrencySwitch currency={currency} onChange={setCurrency} />
 
-      <div className="ledger stagger-card">
+      <div className="ledger stagger-card currency-fade" key={currency}>
         <div className="ledger-top">
           <div className="ledger-label">Sold actual</div>
           <div className="ledger-value" style={{ color: animatedBalance < 0 ? 'var(--red)' : 'var(--ink)' }}>
@@ -165,6 +185,13 @@ export default function Dashboard() {
             <div className="stub-label">Cheltuit</div>
             <div className="stub-value">{fmt(expense)}</div>
           </div>
+        </div>
+        <div style={{
+          display: 'flex', gap: 14, marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--line)',
+          fontSize: 12, color: 'rgba(244,236,219,0.5)',
+        }}>
+          <span>💳 Card: <span style={{ color: 'rgba(244,236,219,0.75)', fontWeight: 600 }}>{fmt(cardBalance)} {curSuffix(currency)}</span></span>
+          <span>💵 Cash: <span style={{ color: 'rgba(244,236,219,0.75)', fontWeight: 600 }}>{fmt(cashBalance)} {curSuffix(currency)}</span></span>
         </div>
       </div>
 
@@ -246,9 +273,16 @@ export default function Dashboard() {
         <AmountInput value={amount} onChange={setAmount} placeholder="Sumă" />
         <input type="text" placeholder="Descriere (opțional)" value={desc} onChange={(e) => setDesc(e.target.value)} maxLength={80} />
         {error && <div className="error-msg">{error}</div>}
-        <button type="submit" className="btn-primary" disabled={busy}>
-          {busy ? <span className="spinner" /> : null}Adaugă în registru
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="submit" className={`btn-primary ${savedPulse ? 'btn-pulse' : ''}`} disabled={busy} style={{ flex: 1 }}>
+            {busy ? <span className="spinner" /> : savedPulse ? '✓ ' : null}{savedPulse ? 'Salvat' : editingId ? 'Salvează modificarea' : 'Adaugă în registru'}
+          </button>
+          {editingId && (
+            <button type="button" onClick={handleCancelEdit} style={{ ...toggleStyle(false, 'var(--brass)'), flexShrink: 0, padding: '0 18px' }}>
+              Anulează
+            </button>
+          )}
+        </div>
       </form>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -282,6 +316,7 @@ export default function Dashboard() {
 
       {loaded && sorted.length === 0 && (
         <div style={{ textAlign: 'center', color: 'rgba(244,236,219,0.4)', padding: '36px 0', border: '1px dashed var(--line)', borderRadius: 14 }}>
+          <div className="empty-state-icon" style={{ fontSize: 32, marginBottom: 8 }}>{curEntries.length === 0 ? '📖' : '🔍'}</div>
           {curEntries.length === 0 ? 'Nicio tranzacție încă' : 'Nimic găsit pentru filtrul curent'}
         </div>
       )}
@@ -291,7 +326,7 @@ export default function Dashboard() {
         const sign = e.type === 'income' ? '+' : '−';
         const dateStr = new Date(e.createdAt).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
         return (
-          <SwipeableRow key={e.id} onDelete={() => handleDelete(e)}>
+          <SwipeableRow key={e.id} onDelete={() => handleDelete(e)} onEdit={() => handleEditStart(e)} collapsing={removingIds.has(e.id)}>
             <div className="stagger-card" style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               background: '#1c2e26', padding: '13px 14px', border: '1px solid var(--line)',
