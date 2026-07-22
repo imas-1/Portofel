@@ -22,12 +22,12 @@ export default function SetPinSheet({ open, onClose }) {
   }
 
   async function handleDigit(d) {
-    if (pin.length >= 6) return;
+    if (pin.length >= 4) return;
     const next = pin + d;
     setLocalPin(next);
     setError('');
 
-    if (next.length === 4 || next.length === 6) {
+    if (next.length === 4) {
       if (step === 'enter') {
         setFirstPin(next);
         setLocalPin('');
@@ -58,7 +58,7 @@ export default function SetPinSheet({ open, onClose }) {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 18 }}>
-          {Array.from({ length: 6 }).map((_, i) => (
+          {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} style={{
               width: 12, height: 12, borderRadius: '50%',
               border: '1.5px solid #c9b98b',

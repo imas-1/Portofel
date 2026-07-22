@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import useHaptic from '../hooks/useHaptic';
 
 const TABS = [
   { to: '/', label: 'Acasă', icon: '💰', end: true },
@@ -10,6 +11,7 @@ const TABS = [
 ];
 
 export default function BottomNav() {
+  const haptic = useHaptic();
   return (
     <nav className="bottom-nav">
       {TABS.map((tab) => (
@@ -17,6 +19,7 @@ export default function BottomNav() {
           key={tab.to}
           to={tab.to}
           end={tab.end}
+          onClick={() => haptic(8)}
           className={({ isActive }) => (isActive ? 'active' : '')}
         >
           <span className="nav-icon">{tab.icon}</span>

@@ -2,21 +2,21 @@ import { useState } from 'react';
 import { useSecurity } from '../context/SecurityContext';
 
 export default function LockScreen() {
-  const { verifyPin, biometricEnabled, unlockWithBiometrics } = useSecurity();
+  const { verifyPin } = useSecurity();
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
   async function handleDigit(d) {
-    if (pin.length >= 6) return;
+    if (pin.length >= 4) return;
     const next = pin + d;
     setPin(next);
     setError('');
-    if (next.length >= 4) {
+    if (next.length === 4) {
       setBusy(true);
       const ok = await verifyPin(next);
       setBusy(false);
-      if (!ok && next.length === 6) {
+      if (!ok) {
         setError('PIN greșit. Încearcă din nou.');
         setPin('');
       }
@@ -26,11 +26,6 @@ export default function LockScreen() {
   function handleBackspace() {
     setPin((p) => p.slice(0, -1));
     setError('');
-  }
-
-  async function handleBiometric() {
-    const ok = await unlockWithBiometrics();
-    if (!ok) setError('Deblocarea biometrică a eșuat — folosește PIN-ul.');
   }
 
   return (
@@ -47,7 +42,7 @@ export default function LockScreen() {
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-        {Array.from({ length: 6 }).map((_, i) => (
+        {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} style={{
             width: 14, height: 14, borderRadius: '50%',
             border: '1.5px solid rgba(244,236,219,0.35)',
@@ -68,17 +63,6 @@ export default function LockScreen() {
         <button onClick={handleBackspace} style={{ ...keypadBtnStyle, fontSize: 18 }}>⌫</button>
       </div>
 
-      {biometricEnabled && (
-        <button
-          onClick={handleBiometric}
-          style={{
-            background: 'none', border: '1px solid var(--line)', borderRadius: 20, padding: '10px 18px',
-            color: 'var(--paper)', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-          }}
-        >
-          🔓 Deblochează cu Face ID / amprentă
-        </button>
-      )}
     </div>
   );
 }
