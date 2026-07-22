@@ -54,6 +54,15 @@ html, body {
   scrollbar-width: none;         /* Firefox: ascunde bara de scroll, scroll-ul rămâne funcțional */
   -ms-overflow-style: none;      /* IE/old Edge */
 }
+/* Fix pentru PWA standalone pe iOS: fără asta, scroll-ul elastic (rubber-band) pe
+   html/body dezvăluie fundalul nativ (negru) din spatele conținutului la capătul
+   paginii, dând impresia că bara de jos "plutește" prea sus, cu gol dedesubt.
+   Blocăm html/body și mutăm scroll-ul efectiv pe #root, care rămâne mereu
+   umplut cu tema aplicației, deci nu mai apare niciun gol la overscroll. */
+@supports (-webkit-touch-callout: none) {
+  html, body { position: fixed; inset: 0; overflow: hidden; }
+  #root { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+}
 html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }  /* Chrome/Safari */
 * { scrollbar-width: none; }
 *::-webkit-scrollbar { display: none; }
@@ -179,6 +188,10 @@ body {
   max-height: 200px; opacity: 1; transition: max-height .25s ease, opacity .2s ease, margin-bottom .25s ease;
 }
 .swipe-row-wrap.row-collapsing { max-height: 0; opacity: 0; margin-bottom: 0; pointer-events: none; }
+
+/* Colaps generic (reutilizat pentru arhivare/duplicare spații) */
+.collapse-wrap { overflow: hidden; max-height: 300px; opacity: 1; transition: max-height .25s ease, opacity .2s ease; }
+.collapse-wrap.row-collapsing { max-height: 0; opacity: 0; pointer-events: none; }
 .swipe-row-bg {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: flex-end;
   padding-right: 22px; color: #fff; font-weight: 700; font-size: 13.5px; background: var(--red);
