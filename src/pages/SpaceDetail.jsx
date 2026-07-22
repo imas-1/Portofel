@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useData, computeSpaceStats, CAT_MAP, curSuffix } from '../context/DataContext';
 import { useSnackbar } from '../context/SnackbarContext';
@@ -217,12 +218,15 @@ export default function SpaceDetail() {
         ))}
       </div>
 
-      <button
-        onClick={() => { setEditingEntry(null); setEntrySheetOpen(true); }}
-        className="fab-button"
-      >
-        +
-      </button>
+      {document.getElementById('app-overlay-root') && createPortal(
+        <button
+          onClick={() => { setEditingEntry(null); setEntrySheetOpen(true); }}
+          className="fab-button"
+        >
+          +
+        </button>,
+        document.getElementById('app-overlay-root')
+      )}
 
       <SpaceEntrySheet
         open={entrySheetOpen}

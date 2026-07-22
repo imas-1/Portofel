@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useData, computeGoalStats, curSuffix } from '../context/DataContext';
 import { useSnackbar } from '../context/SnackbarContext';
@@ -145,12 +146,15 @@ export default function GoalDetail() {
         </SwipeableRow>
       ))}
 
-      <button
-        onClick={() => setContribSheetOpen(true)}
-        className="fab-button"
-      >
-        +
-      </button>
+      {document.getElementById('app-overlay-root') && createPortal(
+        <button
+          onClick={() => setContribSheetOpen(true)}
+          className="fab-button"
+        >
+          +
+        </button>,
+        document.getElementById('app-overlay-root')
+      )}
 
       <ContributionSheet
         open={contribSheetOpen}
