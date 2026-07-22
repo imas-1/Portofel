@@ -25,6 +25,13 @@ const AmountInput = forwardRef(function AmountInput({ value, onChange, placehold
     if (sepMatch && sepMatch[1].length > 2) {
       cleaned = cleaned.slice(0, cleaned.indexOf(sepMatch[0]) + 3);
     }
+    // limitează partea întreagă la 9 cifre (max ~999.999.999) — evită sume introduse din greșeală
+    const intPart = cleaned.split(/[.,]/)[0];
+    if (intPart.length > 9) {
+      const sep = cleaned.match(/[.,]/);
+      const rest = sep ? cleaned.slice(cleaned.indexOf(sep[0])) : '';
+      cleaned = intPart.slice(0, 9) + rest;
+    }
     onChange(cleaned);
   }
 
@@ -53,6 +60,6 @@ export function parseAmountInput(raw) {
   if (raw == null || raw === '') return null;
   const normalized = String(raw).replace(',', '.');
   const val = parseFloat(normalized);
-  if (!isFinite(val)) return null;
+  if (!isFinite(val) || val > 999999999.99) return null;
   return Math.round(val * 100) / 100;
 }
