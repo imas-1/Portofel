@@ -81,7 +81,7 @@ body {
   min-height: 100dvh; /* dvh ține cont corect de bara de adresă mobilă; vh rămâne fallback pt. browsere vechi */
 }
 
-.brand-row { display:flex; align-items:baseline; justify-content:space-between; margin-bottom: 18px; padding: 0 4px; }
+.brand-row { display:flex; align-items:baseline; justify-content:space-between; margin-bottom: 22px; padding: 0 4px; }
 .brand { font-family:'Fraunces', serif; font-size:22px; font-weight:600; }
 .brand-tag { font-size:11px; color: var(--text-dim); text-transform:uppercase; letter-spacing:1.5px; }
 
@@ -90,6 +90,7 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulseRing { 0% { box-shadow: 0 0 0 0 rgba(201,154,62,0.45); } 100% { box-shadow: 0 0 0 14px rgba(201,154,62,0); } }
 @keyframes popIn { 0% { opacity:0; transform: scale(0.9) translateY(8px); } 60% { opacity:1; transform: scale(1.015) translateY(0); } 100% { transform: scale(1); } }
+.btn-pulse { animation: pulseRing 0.6s ease-out; background: var(--green) !important; transition: background .2s; }
 
 .stagger-card { animation: cardIn 0.5s cubic-bezier(.2,.8,.2,1) both; }
 .pulse-on-update { animation: pulseRing 0.7s ease-out; }
@@ -131,6 +132,20 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Cross-fade discret la schimbarea valutei (Lei ↔ Euro) */
+.currency-fade { animation: currencyFadeIn 0.28s ease-out both; }
+@keyframes currencyFadeIn {
+  from { opacity: 0.2; }
+  to { opacity: 1; }
+}
+
+/* Respirație lentă pentru iconițele din stările goale */
+.empty-state-icon { animation: breathe 2.6s ease-in-out infinite; }
+@keyframes breathe {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
 /* Banner de actualizare PWA — poziționat jos, ca un Snackbar, exact deasupra
    bării de navigare. Evită complet orice coliziune cu header-ul, indiferent
    de telefon (Dynamic Island, notch, sau fără). */
@@ -159,10 +174,17 @@ body {
 }
 
 /* Swipe pe rânduri de tranzacții */
-.swipe-row-wrap { position: relative; border-radius: 14px; overflow: hidden; margin-bottom: 8px; }
+.swipe-row-wrap {
+  position: relative; border-radius: 14px; overflow: hidden; margin-bottom: 8px;
+  max-height: 200px; opacity: 1; transition: max-height .25s ease, opacity .2s ease, margin-bottom .25s ease;
+}
+.swipe-row-wrap.row-collapsing { max-height: 0; opacity: 0; margin-bottom: 0; pointer-events: none; }
 .swipe-row-bg {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: flex-end;
   padding-right: 22px; color: #fff; font-weight: 700; font-size: 13.5px; background: var(--red);
+}
+.swipe-row-bg-left {
+  justify-content: flex-start; padding-left: 22px; padding-right: 0; background: var(--brass); color: #2a1e08;
 }
 .swipe-row-fg { position: relative; transition: transform .2s ease; touch-action: pan-y; }
 
