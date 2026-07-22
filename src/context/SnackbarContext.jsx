@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 const SnackbarContext = createContext(null);
 
@@ -20,13 +21,13 @@ export function SnackbarProvider({ children }) {
   return (
     <SnackbarContext.Provider value={{ showSnackbar, dismiss }}>
       {children}
-      {snackbar && (
+      {snackbar && document.getElementById('app-overlay-root') && createPortal(
         <div
           style={{
-            position: 'fixed', left: '50%', transform: 'translateX(-50%)',
+            position: 'absolute', left: '50%', transform: 'translateX(-50%)',
             bottom: 'calc(72px + env(safe-area-inset-bottom) + 12px)',
             background: '#1b3328', color: 'var(--paper)', padding: '13px 16px', borderRadius: 12,
-            display: 'flex', alignItems: 'center', gap: 16, fontSize: 13.5, zIndex: 300,
+            display: 'flex', alignItems: 'center', gap: 16, fontSize: 13.5,
             boxShadow: '0 12px 30px rgba(0,0,0,0.4)', border: '1px solid rgba(244,236,219,0.15)',
             maxWidth: '90vw', animation: 'fadeInUp 0.25s ease both',
           }}
@@ -40,7 +41,8 @@ export function SnackbarProvider({ children }) {
               {snackbar.actionLabel}
             </button>
           )}
-        </div>
+        </div>,
+        document.getElementById('app-overlay-root')
       )}
     </SnackbarContext.Provider>
   );
