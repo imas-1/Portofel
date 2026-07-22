@@ -54,15 +54,6 @@ html, body {
   scrollbar-width: none;         /* Firefox: ascunde bara de scroll, scroll-ul rămâne funcțional */
   -ms-overflow-style: none;      /* IE/old Edge */
 }
-/* Fix pentru PWA standalone pe iOS: fără asta, scroll-ul elastic (rubber-band) pe
-   html/body dezvăluie fundalul nativ (negru) din spatele conținutului la capătul
-   paginii, dând impresia că bara de jos "plutește" prea sus, cu gol dedesubt.
-   Blocăm html/body și mutăm scroll-ul efectiv pe #root, care rămâne mereu
-   umplut cu tema aplicației, deci nu mai apare niciun gol la overscroll. */
-@supports (-webkit-touch-callout: none) {
-  html, body { position: fixed; inset: 0; overflow: hidden; }
-  #root { overflow-y: auto; -webkit-overflow-scrolling: touch; }
-}
 html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }  /* Chrome/Safari */
 * { scrollbar-width: none; }
 *::-webkit-scrollbar { display: none; }
@@ -81,13 +72,28 @@ body {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
 
+/* Structura aplicației: coloană flex pe toată înălțimea reală a viewport-ului
+   (100dvh — corect pe toate versiunile iOS/Android moderne). Zona de conținut
+   scrollează intern; bara de jos e ultimul element flex, NU position:fixed.
+   Motiv: pe unele PWA-uri instalate pe ecranul principal (iOS standalone),
+   position:fixed;bottom:0 se poate calcula greșit față de viewport-ul real,
+   lăsând un gol vizibil sub bară. Layout-ul flex e imun la acest bug, pentru
+   că bara își ia poziția din fluxul normal al paginii, nu din calculul de
+   viewport al browserului. */
+.app-frame { display: flex; flex-direction: column; height: 100vh; height: 100dvh; position: relative; }
+/* Container pentru elemente "plutitoare" (FAB, toast) poziționate relativ la
+   .app-frame (înălțime fixă, 100dvh), nu relativ la viewport-ul brut al
+   browserului — evită același bug de calcul greșit al viewport-ului întâlnit
+   la bara de jos, pe unele PWA-uri iOS instalate pe ecranul principal. */
+.app-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 200; }
+.app-overlay > * { pointer-events: auto; }
+.app-scroll { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; overflow-x: hidden; }
+
 .app-shell {
   max-width: 460px;
   margin: 0 auto;
-  padding: calc(18px + env(safe-area-inset-top)) 16px 90px;
+  padding: calc(18px + env(safe-area-inset-top)) 16px 24px;
   position: relative;
-  min-height: 100vh;
-  min-height: 100dvh; /* dvh ține cont corect de bara de adresă mobilă; vh rămâne fallback pt. browsere vechi */
 }
 
 .brand-row { display:flex; align-items:baseline; justify-content:space-between; margin-bottom: 22px; padding: 0 4px; }
@@ -255,10 +261,9 @@ input:focus { outline:none; border-color:var(--brass); box-shadow: 0 0 0 3px rgb
 
 /* Bottom nav */
 .bottom-nav {
-  position: fixed; bottom: 0; left: 0; right: 0;
   background: rgba(15,32,25,0.92); backdrop-filter: blur(10px);
   border-top: 1px solid var(--line);
-  display: flex; z-index: 100;
+  display: flex; z-index: 100; flex-shrink: 0;
   padding-bottom: env(safe-area-inset-bottom);
 }
 .bottom-nav a {
@@ -270,12 +275,12 @@ input:focus { outline:none; border-color:var(--brass); box-shadow: 0 0 0 3px rgb
 .bottom-nav .nav-icon { font-size: 17px; }
 
 .fab-button {
-  position: fixed;
+  position: absolute;
   right: max(20px, env(safe-area-inset-right));
   bottom: calc(72px + env(safe-area-inset-bottom) + 14px);
   width: 58px; height: 58px; border-radius: 50%;
   background: var(--brass); color: #2a1e08; font-size: 28px; font-weight: 700; border: none;
-  box-shadow: 0 10px 26px rgba(0,0,0,0.4); cursor: pointer; z-index: 60;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.4); cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: transform .15s ease;
 }
