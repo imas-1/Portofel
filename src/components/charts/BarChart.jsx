@@ -1,7 +1,9 @@
+import { memo } from 'react';
+
 /**
  * Bar chart cu două serii, în SVG. months = [{ label, a, b }]
  */
-export default function BarChart({ months, colorA, colorB, height = 130 }) {
+function BarChart({ months, colorA, colorB, height = 130 }) {
   const maxVal = Math.max(1, ...months.map((m) => Math.max(m.a, m.b)));
   const groupW = 100 / months.length;
   const barW = Math.min(9, groupW * 0.32);
@@ -26,3 +28,5 @@ export default function BarChart({ months, colorA, colorB, height = 130 }) {
     </svg>
   );
 }
+
+export default memo(BarChart);

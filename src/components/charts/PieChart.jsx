@@ -1,8 +1,10 @@
+import { memo } from 'react';
+
 /**
  * Donut chart simplu în SVG. data = [{ label, value, color, icon }]
  * Fără librării externe — desenat manual cu stroke-dasharray pe cercuri concentrice.
  */
-export default function PieChart({ data, size = 180, thickness = 26 }) {
+function PieChart({ data, size = 180, thickness = 26 }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   const radius = (size - thickness) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -62,3 +64,5 @@ export default function PieChart({ data, size = 180, thickness = 26 }) {
     </div>
   );
 }
+
+export default memo(PieChart);

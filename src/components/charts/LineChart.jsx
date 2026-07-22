@@ -1,7 +1,9 @@
+import { memo } from 'react';
+
 /**
  * Line chart cu arie umplută, în SVG. points = [{ label, value }]
  */
-export default function LineChart({ points, color = '#c99a3e', height = 110 }) {
+function LineChart({ points, color = '#c99a3e', height = 110 }) {
   if (points.length < 2) {
     return (
       <div style={{ textAlign: 'center', color: 'rgba(244,236,219,0.4)', padding: '20px 0', fontSize: 13 }}>
@@ -43,3 +45,5 @@ export default function LineChart({ points, color = '#c99a3e', height = 110 }) {
     </svg>
   );
 }
+
+export default memo(LineChart);
