@@ -28,15 +28,18 @@ function Shell({ children }) {
   const location = useLocation();
   const hideNav = location.pathname === '/login';
   return (
-    <>
-      {/* key={pathname} forțează un remount la schimbarea rutei, ceea ce declanșează
-          animația .page-transition definită în theme.css — o tranziție fade+slide
-          discretă, fără librării de routing-animation externe. */}
-      <div className="page-transition" key={location.pathname}>
-        {children}
+    <div className="app-frame">
+      <div className="app-scroll">
+        {/* key={pathname} forțează un remount la schimbarea rutei, ceea ce declanșează
+            animația .page-transition definită în theme.css — o tranziție fade+slide
+            discretă, fără librării de routing-animation externe. */}
+        <div className="page-transition" key={location.pathname}>
+          {children}
+        </div>
       </div>
       {!hideNav && <BottomNav />}
-    </>
+      <div id="app-overlay-root" className="app-overlay"></div>
+    </div>
   );
 }
 
