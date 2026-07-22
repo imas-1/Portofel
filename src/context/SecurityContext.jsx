@@ -10,7 +10,6 @@ async function sha256(text) {
 
 export function SecurityProvider({ children }) {
   const [pinHash, setPinHash] = useState(() => localStorage.getItem('portofel_pin_hash'));
-  const [biometricEnabled, setBiometricEnabled] = useState(() => localStorage.getItem('portofel_biometric') === '1');
   const [locked, setLocked] = useState(!!localStorage.getItem('portofel_pin_hash'));
 
   // Re-blochează aplicația când revine din fundal (ex. utilizatorul a schimbat aplicația și s-a întors)
@@ -33,9 +32,7 @@ export function SecurityProvider({ children }) {
 
   function removePin() {
     localStorage.removeItem('portofel_pin_hash');
-    localStorage.removeItem('portofel_biometric');
     setPinHash(null);
-    setBiometricEnabled(false);
     setLocked(false);
   }
 
@@ -48,42 +45,11 @@ export function SecurityProvider({ children }) {
     return false;
   }
 
-  function toggleBiometric(value) {
-    localStorage.setItem('portofel_biometric', value ? '1' : '0');
-    setBiometricEnabled(value);
-  }
-
-  /**
-   * Deblocare biometrică (Face ID / amprentă) prin WebAuthn — folosește
-   * autentificatorul platformei dacă e disponibil. Notă: acest API necesită
-   * HTTPS și o interacțiune reală a utilizatorului; nu am putut testa efectiv
-   * fluxul pe un dispozitiv real în acest mediu, deci tratează-l ca "beta" —
-   * dacă WebAuthn eșuează sau nu e suportat, se poate oricând debloca prin PIN.
-   */
-  async function unlockWithBiometrics() {
-    if (!window.PublicKeyCredential) return false;
-    try {
-      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-      if (!available) return false;
-      await navigator.credentials.get({
-        publicKey: {
-          challenge: crypto.getRandomValues(new Uint8Array(32)),
-          userVerification: 'required',
-          timeout: 30000,
-        },
-      });
-      setLocked(false);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
   const hasPin = !!pinHash;
 
   return (
     <SecurityContext.Provider
-      value={{ hasPin, locked, biometricEnabled, setPin, removePin, verifyPin, toggleBiometric, unlockWithBiometrics, setLocked }}
+      value={{ hasPin, locked, setPin, removePin, verifyPin, setLocked }}
     >
       {children}
     </SecurityContext.Provider>
