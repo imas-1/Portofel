@@ -7,6 +7,7 @@ import useHaptic from '../hooks/useHaptic';
 import SpaceEntrySheet from '../components/SpaceEntrySheet';
 import SpaceFormSheet from '../components/SpaceFormSheet';
 import SwipeableRow from '../components/SwipeableRow';
+import QuickAmountEditSheet from '../components/QuickAmountEditSheet';
 import { fmt } from '../utils/format';
 
 function dayLabel(ts) {
@@ -33,6 +34,7 @@ export default function SpaceDetail() {
   const [formSheetOpen, setFormSheetOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [removingIds, setRemovingIds] = useState(() => new Set());
+  const [quickEditEntry, setQuickEditEntry] = useState(null);
 
   const stats = useMemo(() => (sp ? computeSpaceStats(entries, sp.id) : null), [entries, sp]);
 
@@ -191,10 +193,13 @@ export default function SpaceDetail() {
                       background: e.type === 'income' ? 'var(--green)' : 'var(--red)', border: '2px solid var(--bg-0)', zIndex: 2,
                     }} />
                     <SwipeableRow onDelete={() => handleDeleteEntry(e)} onEdit={() => { setEditingEntry(e); setEntrySheetOpen(true); }} collapsing={removingIds.has(e.id)}>
-                      <div style={{
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        background: 'rgba(244,236,219,0.05)', borderRadius: 14, padding: '12px 14px', border: '1px solid var(--line)',
-                      }}>
+                      <div
+                        onClick={() => setQuickEditEntry(e)}
+                        style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer',
+                          background: 'rgba(244,236,219,0.05)', borderRadius: 14, padding: '12px 14px', border: '1px solid var(--line)',
+                        }}
+                      >
                         <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
                           <div style={{ fontSize: 18, marginRight: 10 }}>{cat.icon}</div>
                           <div style={{ minWidth: 0 }}>
@@ -206,7 +211,7 @@ export default function SpaceDetail() {
                           <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontWeight: 600, fontSize: 14, color: e.type === 'income' ? '#6fd196' : '#e08672' }}>
                             {sign}{fmt(e.amount)} {curSuffix(e.currency || 'RON')}
                           </div>
-                          <button onClick={() => { setEditingEntry(e); setEntrySheetOpen(true); }} style={smallBtnStyle}>✏️</button>
+                          <button onClick={(ev) => { ev.stopPropagation(); setEditingEntry(e); setEntrySheetOpen(true); }} style={smallBtnStyle}>✏️</button>
                         </div>
                       </div>
                     </SwipeableRow>
@@ -227,6 +232,16 @@ export default function SpaceDetail() {
         </button>,
         document.getElementById('app-overlay-root')
       )}
+
+      <QuickAmountEditSheet
+        open={!!quickEditEntry}
+        onClose={() => setQuickEditEntry(null)}
+        initialAmount={quickEditEntry?.amount}
+        onSave={async (val) => {
+          await editEntry(quickEditEntry.id, { amount: val });
+          haptic(10);
+        }}
+      />
 
       <SpaceEntrySheet
         open={entrySheetOpen}

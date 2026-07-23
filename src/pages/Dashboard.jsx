@@ -8,6 +8,7 @@ import useHaptic from '../hooks/useHaptic';
 import AmountInput, { parseAmountInput } from '../components/AmountInput';
 import FilterPanel from '../components/FilterPanel';
 import SwipeableRow from '../components/SwipeableRow';
+import QuickAmountEditSheet from '../components/QuickAmountEditSheet';
 import SkeletonList from '../components/Skeleton';
 import { fmt, monthKey } from '../utils/format';
 import CurrencySwitch from '../components/CurrencySwitch';
@@ -39,6 +40,7 @@ export default function Dashboard() {
   const [savedPulse, setSavedPulse] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [removingIds, setRemovingIds] = useState(() => new Set());
+  const [quickEditEntry, setQuickEditEntry] = useState(null);
 
   const curEntries = useMemo(
     () => entries.filter((e) => (e.currency || 'RON') === currency && !e.isTransfer),
@@ -336,11 +338,15 @@ export default function Dashboard() {
         const dateStr = new Date(e.createdAt).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
         return (
           <SwipeableRow key={e.id} onDelete={() => handleDelete(e)} onEdit={() => handleEditStart(e)} collapsing={removingIds.has(e.id)}>
-            <div className="stagger-card" style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              background: '#1c2e26', padding: '13px 14px', border: '1px solid var(--line)',
-              animationDelay: `${Math.min(i, 8) * 0.03}s`,
-            }}>
+            <div
+              className="stagger-card"
+              onClick={() => setQuickEditEntry(e)}
+              style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer',
+                background: '#1c2e26', padding: '13px 14px', border: '1px solid var(--line)',
+                animationDelay: `${Math.min(i, 8) * 0.03}s`,
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
                 <div style={{ width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 12, background: e.type === 'income' ? 'var(--green-soft)' : 'var(--red-soft)' }}>
                   {cat.icon}
@@ -359,6 +365,16 @@ export default function Dashboard() {
           </SwipeableRow>
         );
       })}
+
+      <QuickAmountEditSheet
+        open={!!quickEditEntry}
+        onClose={() => setQuickEditEntry(null)}
+        initialAmount={quickEditEntry?.amount}
+        onSave={async (val) => {
+          await editEntry(quickEditEntry.id, { amount: val });
+          haptic(10);
+        }}
+      />
     </div>
   );
 }

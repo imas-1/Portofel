@@ -8,12 +8,13 @@ import ContributionSheet from '../components/ContributionSheet';
 import GoalFormSheet from '../components/GoalFormSheet';
 import Confetti from '../components/Confetti';
 import SwipeableRow from '../components/SwipeableRow';
+import QuickAmountEditSheet from '../components/QuickAmountEditSheet';
 import { fmt } from '../utils/format';
 
 export default function GoalDetail() {
   const { goalId } = useParams();
   const navigate = useNavigate();
-  const { goals, addContribution, deleteContribution, updateGoal, deleteGoal } = useData();
+  const { goals, addContribution, deleteContribution, editContribution, updateGoal, deleteGoal } = useData();
   const { showSnackbar } = useSnackbar();
   const haptic = useHaptic();
   const goal = goals.find((g) => g.id === goalId);
@@ -24,6 +25,7 @@ export default function GoalDetail() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [wasCompleted, setWasCompleted] = useState(goal?.completed || false);
   const [removingIds, setRemovingIds] = useState(() => new Set());
+  const [quickEditContrib, setQuickEditContrib] = useState(null);
 
   useEffect(() => {
     if (goal && goal.completed && !wasCompleted) {
@@ -129,10 +131,13 @@ export default function GoalDetail() {
 
       {sortedContribs.map((c) => (
         <SwipeableRow key={c.id} onDelete={() => handleDeleteContrib(c)} collapsing={removingIds.has(c.id)}>
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            background: 'rgba(244,236,219,0.05)', borderRadius: 14, padding: '12px 14px', border: '1px solid var(--line)',
-          }}>
+          <div
+            onClick={() => setQuickEditContrib(c)}
+            style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer',
+              background: 'rgba(244,236,219,0.05)', borderRadius: 14, padding: '12px 14px', border: '1px solid var(--line)',
+            }}
+          >
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 500 }}>{c.note || 'Contribuție'}</div>
               <div style={{ fontSize: 11, color: 'rgba(244,236,219,0.4)' }}>
@@ -155,6 +160,16 @@ export default function GoalDetail() {
         </button>,
         document.getElementById('app-overlay-root')
       )}
+
+      <QuickAmountEditSheet
+        open={!!quickEditContrib}
+        onClose={() => setQuickEditContrib(null)}
+        initialAmount={quickEditContrib?.amount}
+        onSave={async (val) => {
+          await editContribution(goal.id, quickEditContrib.id, { amount: val });
+          haptic(10);
+        }}
+      />
 
       <ContributionSheet
         open={contribSheetOpen}

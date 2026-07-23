@@ -127,6 +127,10 @@ export default function Settings() {
         Ieși din cont
       </button>
 
+      <div style={{ textAlign: 'center', marginTop: 20, fontSize: 11, color: 'rgba(244,236,219,0.35)' }}>
+        Portofel v{__APP_VERSION__} · build {new Date(__BUILD_TIME__).toLocaleString('ro-RO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+      </div>
+
       <SetPinSheet open={pinSheetOpen} onClose={() => setPinSheetOpen(false)} />
     </div>
   );
