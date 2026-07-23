@@ -243,6 +243,11 @@ export function DataProvider({ children }) {
   async function deleteContribution(goalId, contribId) {
     return remove(ref(db, `users/${user.uid}/goals/${goalId}/contributions/${contribId}`));
   }
+  async function editContribution(goalId, contribId, { amount }) {
+    const norm = normalizeAmount(amount);
+    if (!norm || norm <= 0) throw new Error('Sumă invalidă');
+    return update(ref(db, `users/${user.uid}/goals/${goalId}/contributions/${contribId}`), { amount: norm });
+  }
 
   /**
    * Reimportă un backup — adaugă tranzacții/spații/obiective ca intrări NOI
@@ -286,7 +291,7 @@ export function DataProvider({ children }) {
       entries, spaces, goals, loaded,
       addEntry, editEntry, deleteEntry, restoreEntry,
       createSpace, updateSpace, duplicateSpace, deleteSpace,
-      createGoal, updateGoal, deleteGoal, addContribution, deleteContribution,
+      createGoal, updateGoal, deleteGoal, addContribution, deleteContribution, editContribution,
       restoreBackup,
     }),
     [entries, spaces, goals, loaded]
