@@ -1,8 +1,18 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { readFileSync } from 'fs';
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url)));
 
 export default defineConfig({
+  define: {
+    // Disponibile oriunde în cod ca __APP_VERSION__ / __BUILD_TIME__ — utile
+    // ca să confirmi rapid, din Setări, dacă telefonul chiar rulează ultima
+    // versiune (fără să mai ghicești dacă PWA-ul instalat e cel vechi cache-uit).
+    __APP_VERSION__: JSON.stringify(pkg.version),
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     react(),
     VitePWA({
